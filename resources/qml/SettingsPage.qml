@@ -505,10 +505,34 @@ Rectangle {
                                 }
                             }
 
-                            // 3. 恢复默认音源
+                            // 3. 更新默认播放源 (Requirement 2)
                             Rectangle {
                                 height: 34
                                 width: 110
+                                radius: 6
+                                gradient: Gradient {
+                                    GradientStop { position: 0.0; color: Theme.accentGradientStart }
+                                    GradientStop { position: 1.0; color: Theme.accentGradientEnd }
+                                }
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 4
+                                    Text { text: "🔄"; font.pixelSize: 11 }
+                                    Text { text: "更新播放源"; color: "#FFFFFF"; font.pixelSize: 12; font.bold: true }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: backend.updateDefaultSources()
+                                }
+                            }
+
+                            // 4. 恢复默认音源
+                            Rectangle {
+                                height: 34
+                                width: 100
                                 radius: 6
                                 color: Theme.bgCardHover
                                 border.color: Theme.border
@@ -517,8 +541,8 @@ Rectangle {
                                 Row {
                                     anchors.centerIn: parent
                                     spacing: 4
-                                    Text { text: "🔄"; font.pixelSize: 11 }
-                                    Text { text: "恢复默认音源"; color: Theme.textPrimary; font.pixelSize: 12 }
+                                    Text { text: "⏮"; font.pixelSize: 11 }
+                                    Text { text: "恢复默认"; color: Theme.textPrimary; font.pixelSize: 12 }
                                 }
 
                                 MouseArea {

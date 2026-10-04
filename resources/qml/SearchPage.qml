@@ -150,8 +150,7 @@ Rectangle {
             text: "📝 查看歌词"
             onTriggered: {
                 if (contextMenu.selectedSong) {
-                    backend.fetchLyrics(contextMenu.selectedSong)
-                    root.showLyrics(contextMenu.selectedSong.title, contextMenu.selectedSong.artist, backend.currentLyrics)
+                    backend.previewLyrics(contextMenu.selectedSong)
                 }
             }
         }
@@ -281,7 +280,7 @@ Rectangle {
                     y: sourceBtn.height + 4
                     x: sourceSelectorItem.width - width
                     width: 260
-                    height: Math.min(260, (backend.sources.length + 1) * 38 + 16)
+                    height: Math.min(310, (backend.sources.length + 1) * 38 + 60)
                     padding: 6
                     background: Rectangle {
                         color: Theme.bgCard
@@ -289,41 +288,78 @@ Rectangle {
                         border.width: 1
                         radius: 8
                     }
-                    contentItem: ListView {
-                        clip: true
-                        model: [{ id: "all", name: "全部聚合 (智能多源互补)", platform: 0 }].concat(backend.sources)
-                        delegate: Rectangle {
-                            width: parent.width
-                            height: 36
-                            radius: 4
-                            color: (backend.currentSourceId === modelData.id) ? Theme.accent : (srcItemMouse.containsMouse ? Theme.bgCardHover : "transparent")
+                    contentItem: Column {
+                        spacing: 4
 
-                            Text {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: modelData.name
-                                color: (backend.currentSourceId === modelData.id) ? "#FFFFFF" : Theme.textPrimary
-                                font.pixelSize: 11
-                                font.bold: backend.currentSourceId === modelData.id
-                                elide: Text.ElideRight
-                                width: parent.width - 24
+                        ListView {
+                            width: parent.width
+                            height: Math.min(200, (backend.sources.length + 1) * 36)
+                            clip: true
+                            model: [{ id: "all", name: "全部聚合 (智能多源互补)", platform: 0 }].concat(backend.sources)
+                            delegate: Rectangle {
+                                width: parent.width
+                                height: 36
+                                radius: 4
+                                color: (backend.currentSourceId === modelData.id) ? Theme.accent : (srcItemMouse.containsMouse ? Theme.bgCardHover : "transparent")
+
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modelData.name
+                                    color: (backend.currentSourceId === modelData.id) ? "#FFFFFF" : Theme.textPrimary
+                                    font.pixelSize: 11
+                                    font.bold: backend.currentSourceId === modelData.id
+                                    elide: Text.ElideRight
+                                    width: parent.width - 24
+                                }
+
+                                MouseArea {
+                                    id: srcItemMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        backend.currentSourceId = modelData.id
+                                        sourcePopup.visible = false
+                                        if (modelData.id !== "all" && modelData.platform !== undefined) {
+                                            root.currentPlatform = modelData.platform
+                                        }
+                                        if (searchInput.text.trim().length > 0) {
+                                            executeSearch(1)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: 1
+                            color: Theme.borderSubtle
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: 32
+                            radius: 4
+                            color: updateSrcMouse.containsMouse ? Theme.bgCardHover : "transparent"
+
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Text { text: "🔄"; font.pixelSize: 11 }
+                                Text { text: "更新/刷新默认播放源"; color: Theme.accent; font.pixelSize: 11; font.bold: true }
                             }
 
                             MouseArea {
-                                id: srcItemMouse
+                                id: updateSrcMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    backend.currentSourceId = modelData.id
+                                    backend.updateDefaultSources()
                                     sourcePopup.visible = false
-                                    if (modelData.id !== "all" && modelData.platform !== undefined) {
-                                        root.currentPlatform = modelData.platform
-                                    }
-                                    if (searchInput.text.trim().length > 0) {
-                                        executeSearch(1)
-                                    }
                                 }
                             }
                         }
@@ -942,8 +978,7 @@ Rectangle {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    backend.fetchLyrics(modelData)
-                                    root.showLyrics(modelData.title, modelData.artist, backend.currentLyrics)
+                                    backend.previewLyrics(modelData)
                                 }
                             }
                         }

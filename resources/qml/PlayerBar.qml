@@ -150,7 +150,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: 3
             spacing: 5
-            width: parent.width - 260 - 240 - 32
+            width: parent.width - 260 - 320 - 32
 
             // Playback Buttons Row
             Row {
@@ -458,9 +458,9 @@ Rectangle {
 
         // ================= Right: Volume, Lyrics & Playlist Drawer =================
         Row {
-            width: 240
+            width: 320
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 12
+            spacing: 10
             layoutDirection: Qt.RightToLeft
 
             // Playlist Drawer Button with Badge
@@ -509,6 +509,112 @@ Rectangle {
 
                 ToolTip.visible: plMouse.containsMouse
                 ToolTip.text: "当前播放列表 (" + backend.playlist.length + "首)"
+            }
+
+            // Audio Quality Selector in Bottom Player Bar (Requirement 3)
+            Item {
+                width: barQualityBtn.width
+                height: 32
+                anchors.verticalCenter: parent.verticalCenter
+
+                Rectangle {
+                    id: barQualityBtn
+                    height: 30
+                    width: barQualityRow.implicitWidth + 14
+                    radius: 15
+                    color: barQualityMouse.containsMouse ? Theme.bgCardHover : Theme.bgCard
+                    border.color: barQualityPopup.visible ? Theme.accent : Theme.border
+                    border.width: 1
+
+                    Row {
+                        id: barQualityRow
+                        anchors.centerIn: parent
+                        spacing: 4
+
+                        Text {
+                            text: {
+                                switch (backend.playbackQuality) {
+                                    case 2: return "💎 FLAC"
+                                    case 1: return "✨ 320k"
+                                    default: return "🎵 128k"
+                                }
+                            }
+                            color: Theme.accent
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+
+                        Text {
+                            text: "▾"
+                            color: Theme.textSecondary
+                            font.pixelSize: 9
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: barQualityMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: barQualityPopup.visible = !barQualityPopup.visible
+                    }
+
+                    ToolTip.visible: barQualityMouse.containsMouse
+                    ToolTip.text: "当前播放音质: " + backend.playbackQualityName() + " (点击切换)"
+                }
+
+                Popup {
+                    id: barQualityPopup
+                    y: -height - 6
+                    x: barQualityBtn.width - width
+                    width: 156
+                    padding: 6
+                    background: Rectangle {
+                        color: Theme.bgCard
+                        border.color: Theme.border
+                        border.width: 1
+                        radius: 8
+                    }
+
+                    contentItem: Column {
+                        spacing: 3
+                        Repeater {
+                            model: [
+                                { q: 2, label: "💎 FLAC 无损" },
+                                { q: 1, label: "✨ 320k 高品" },
+                                { q: 0, label: "🎵 128k 标准" }
+                            ]
+                            delegate: Rectangle {
+                                width: parent.width
+                                height: 30
+                                radius: 4
+                                color: (backend.playbackQuality === modelData.q) ? Theme.accent : (barQItemMouse.containsMouse ? Theme.bgCardHover : "transparent")
+
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modelData.label
+                                    color: (backend.playbackQuality === modelData.q) ? "#FFFFFF" : Theme.textPrimary
+                                    font.pixelSize: 11
+                                    font.bold: backend.playbackQuality === modelData.q
+                                }
+
+                                MouseArea {
+                                    id: barQItemMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        backend.setPlaybackQuality(modelData.q)
+                                        barQualityPopup.visible = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Lyrics Button

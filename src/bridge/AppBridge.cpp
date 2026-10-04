@@ -356,9 +356,22 @@ void AppBridge::setPlayMode(int mode) {
 
 void AppBridge::fetchLyrics(const QVariantMap &songMap) {
     SongItem s = SongItem::fromMap(songMap);
-    m_service->getLyric(s, [this](bool ok, const QString &lrc) {
-        m_currentLyrics = ok ? lrc : "暂无歌词信息";
-        emit lyricsChanged();
+    m_service->getLyric(s, [this, s](bool ok, const QString &lrc) {
+        // Only update currentLyrics if this is still the currently playing song!
+        if (m_currentSong.id == s.id) {
+            m_currentLyrics = ok ? lrc : "暂无歌词信息";
+            emit lyricsChanged();
+        }
+    });
+}
+
+void AppBridge::previewLyrics(const QVariantMap &songMap) {
+    SongItem s = SongItem::fromMap(songMap);
+    if (s.id.isEmpty() || s.title.isEmpty()) return;
+
+    m_service->getLyric(s, [this, s](bool ok, const QString &lrc) {
+        QString lyrics = ok ? lrc : "暂无歌词信息";
+        emit previewLyricsReady(s.title, s.artist, lyrics);
     });
 }
 
@@ -450,6 +463,10 @@ bool AppBridge::importSources(const QString &filePath) {
 
 void AppBridge::resetDefaultSources() {
     m_sourceManager->resetDefaultSources();
+}
+
+void AppBridge::updateDefaultSources() {
+    m_sourceManager->updateDefaultSources();
 }
 
 void AppBridge::toggleSource(const QString &id, bool enabled) {

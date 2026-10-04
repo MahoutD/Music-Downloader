@@ -108,6 +108,7 @@ public:
     Q_INVOKABLE void setVolume(int vol);
     Q_INVOKABLE void setPlayMode(int mode);
     Q_INVOKABLE void fetchLyrics(const QVariantMap &songMap);
+    Q_INVOKABLE void previewLyrics(const QVariantMap &songMap);
 
     // --- Download APIs ---
     Q_INVOKABLE void downloadSong(const QVariantMap &songMap, int quality = -1);
@@ -125,6 +126,7 @@ public:
     Q_INVOKABLE bool exportSources(const QString &filePath);
     Q_INVOKABLE bool importSources(const QString &filePath);
     Q_INVOKABLE void resetDefaultSources();
+    Q_INVOKABLE void updateDefaultSources();
     Q_INVOKABLE void toggleSource(const QString &id, bool enabled);
 
     // --- Settings APIs ---
@@ -152,6 +154,7 @@ signals:
     void playlistChanged();
     void currentIndexChanged();
     void lyricsChanged();
+    void previewLyricsReady(const QString &title, const QString &artist, const QString &lyrics);
     void playbackQualityChanged();
 
     // Download Signals

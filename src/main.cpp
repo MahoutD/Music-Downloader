@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     app.setApplicationName("MusicDownloader");
     app.setOrganizationName("MusicDownloader");
     app.setApplicationVersion("2.0.0");
-    app.setWindowIcon(QIcon(":/icons/app.svg"));
+    app.setWindowIcon(QIcon(":/icons/app.ico"));
 
     // Set high quality default font
     QFont font = app.font();

@@ -211,6 +211,32 @@ void SourceManager::resetDefaultSources() {
     emit message("已恢复为默认官方高可用内置音源！");
 }
 
+void SourceManager::updateDefaultSources() {
+    auto defs = defaultSources();
+    // Update or append default sources while keeping custom ones
+    for (const auto &def : defs) {
+        bool found = false;
+        for (auto &existing : m_sources) {
+            if (existing.id == def.id) {
+                existing.name = def.name;
+                existing.api = def.api;
+                existing.description = def.description;
+                existing.priority = def.priority;
+                existing.platform = def.platform;
+                existing.enabled = true;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            m_sources.append(def);
+        }
+    }
+    saveSources();
+    emit sourcesChanged();
+    emit message("已成功更新默认播放源！所有最新高可用规则已同步生效。");
+}
+
 void SourceManager::toggleSource(const QString &id, bool enabled) {
     for (auto &item : m_sources) {
         if (item.id == id) {

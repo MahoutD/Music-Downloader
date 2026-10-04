@@ -1,35 +1,40 @@
 @echo off
 setlocal
-echo ====================================================
-echo  Building MusicDownloader with MSVC 2022 and CMake
-echo ====================================================
+echo ===================================================
+echo   Music Downloader - One-click Build Script
+echo ===================================================
 
-call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-if errorlevel 1 (
-    echo [ERROR] Failed to initialize MSVC vcvars64 environment.
-    pause
-    exit /b 1
+if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" (
+    call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat" (
+    call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat"
+) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" (
+    call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 )
 
-cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="D:/Qt/6.8.3/msvc2022_64" -DCMAKE_MAKE_PROGRAM="D:/Qt/Tools/Ninja/ninja.exe"
-if errorlevel 1 (
-    echo [ERROR] CMake configuration failed.
-    pause
-    exit /b 1
+if not defined CMAKE_PREFIX_PATH (
+    if exist "D:\Qt\6.8.3\msvc2022_64" (
+        set "CMAKE_PREFIX_PATH=D:\Qt\6.8.3\msvc2022_64"
+    ) else if exist "C:\Qt\6.8.3\msvc2022_64" (
+        set "CMAKE_PREFIX_PATH=C:\Qt\6.8.3\msvc2022_64"
+    )
 )
 
-cmake --build build --config Release
-if errorlevel 1 (
-    echo [ERROR] Build failed.
-    pause
-    exit /b 1
-)
+echo Configuring CMake...
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+if errorlevel 1 goto error
 
-echo Deploying Qt libraries and QML plugins...
-"D:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe" --qmldir resources/qml --no-translations "build\MusicDownloader.exe"
+echo Compiling...
+ninja -C build
+if errorlevel 1 goto error
 
-echo ====================================================
-echo  Build and deployment completed successfully!
-echo  Run 'run.bat' or 'build\MusicDownloader.exe'
-echo ====================================================
-pause
+echo.
+echo Build succeeded: build\MusicDownloader.exe
+goto end
+
+:error
+echo.
+echo Build failed! Please check environment configuration.
+
+:end
+endlocal

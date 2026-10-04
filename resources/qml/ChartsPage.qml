@@ -145,8 +145,7 @@ Rectangle {
             text: "📝 查看歌词"
             onTriggered: {
                 if (contextMenu.selectedSong) {
-                    backend.fetchLyrics(contextMenu.selectedSong)
-                    root.showLyrics(contextMenu.selectedSong.title, contextMenu.selectedSong.artist, backend.currentLyrics)
+                    backend.previewLyrics(contextMenu.selectedSong)
                 }
             }
         }
@@ -816,8 +815,7 @@ Rectangle {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    backend.fetchLyrics(modelData)
-                                    root.showLyrics(modelData.title, modelData.artist, backend.currentLyrics)
+                                    backend.previewLyrics(modelData)
                                 }
                             }
                         }

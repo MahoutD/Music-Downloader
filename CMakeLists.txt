@@ -41,6 +41,7 @@ set(SOURCES
     src/bridge/AppBridge.h
     src/bridge/AppBridge.cpp
     resources/resources.qrc
+    app.rc
 )
 
 add_executable(MusicDownloader WIN32 ${SOURCES})

@@ -335,7 +335,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        // ---------------- Left: Vinyl Record & Tonearm ----------------
+        // ---------------- Left: Realistic Hi-Fi Vinyl Turntable ----------------
         Item {
             id: leftVinylArea
             width: parent.width * 0.46
@@ -343,122 +343,563 @@ Rectangle {
             anchors.left: parent.left
             anchors.top: parent.top
 
-            // Phonograph Needle / Tonearm
+            // Turntable Deck (唱片机机身机座)
             Item {
-                id: tonearm
-                width: 120
-                height: 160
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.horizontalCenterOffset: 65
-                anchors.top: parent.top
-                anchors.topMargin: 20
-                z: 20
-                transformOrigin: Item.TopLeft
-                rotation: backend.isPlaying ? 0 : -32
+                id: turntableDeck
+                width: Math.min(420, Math.min(leftVinylArea.width - 32, leftVinylArea.height - 32))
+                height: width * 0.94
+                anchors.centerIn: parent
 
-                Behavior on rotation {
-                    NumberAnimation { duration: 400; easing.type: Easing.InOutQuad }
+                // Deck Outer Body with Drop Shadow & Brushed Bevel
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 20
+                    color: Theme.isDark ? "#12141C" : "#E2E8F0"
+                    border.color: Theme.isDark ? "#2A3042" : "#CBD5E1"
+                    border.width: 1.5
+
+                    // Inner Chamfer Panel
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        radius: 17
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Theme.isDark ? "#1E222F" : "#FFFFFF" }
+                            GradientStop { position: 0.3; color: Theme.isDark ? "#161823" : "#F1F5F9" }
+                            GradientStop { position: 1.0; color: Theme.isDark ? "#0F1118" : "#E2E8F0" }
+                        }
+                        border.color: Theme.isDark ? "#222736" : "#E2E8F0"
+                        border.width: 1
+                    }
                 }
 
-                // Needle pivot base
-                Rectangle {
-                    x: 0; y: 0
-                    width: 24; height: 24; radius: 12
-                    color: "#94A3B8"
-                    border.color: "#475569"; border.width: 2
+                // 4 Corner Metallic Mounting Rivets / Screws
+                Repeater {
+                    model: [
+                        { x: 14, y: 14 },
+                        { x: turntableDeck.width - 22, y: 14 },
+                        { x: 14, y: turntableDeck.height - 22 },
+                        { x: turntableDeck.width - 22, y: turntableDeck.height - 22 }
+                    ]
+                    delegate: Rectangle {
+                        x: modelData.x
+                        y: modelData.y
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: Theme.isDark ? "#333A4D" : "#94A3B8"
+                        border.color: Theme.isDark ? "#4B556D" : "#64748B"
+                        border.width: 1
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 2
+                            height: 6
+                            color: Theme.isDark ? "#1E222D" : "#475569"
+                            rotation: (index * 45) % 90
+                        }
+                    }
+                }
+
+                // Top-Left Branding Text
+                Row {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.leftMargin: 24
+                    anchors.topMargin: 20
+                    spacing: 6
+
+                    Rectangle {
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: Theme.accent
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "HI-FI TURNTABLE DIRECT DRIVE"
+                        color: Theme.isDark ? "#64748B" : "#94A3B8"
+                        font.pixelSize: 9
+                        font.bold: true
+                        font.letterSpacing: 1.2
+                    }
+                }
+
+                // Bottom-Left Controls: Speed & Strobe Power Indicator
+                Row {
+                    anchors.left: parent.left
+                    anchors.bottom: parent.bottom
+                    anchors.leftMargin: 24
+                    anchors.bottomMargin: 18
+                    spacing: 12
+
+                    // Strobe Power LED
+                    Item {
+                        width: 18
+                        height: 18
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: backend.isPlaying ? Theme.accent : "#475569"
+                            border.color: backend.isPlaying ? "#FFFFFF" : "#334155"
+                            border.width: 1
+                            Behavior on color { ColorAnimation { duration: 300 } }
+                        }
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: Theme.accent
+                            opacity: backend.isPlaying ? 0.35 : 0
+                            visible: backend.isPlaying
+                            SequentialAnimation on opacity {
+                                loops: Animation.Infinite
+                                running: backend.isPlaying && root.opacity > 0
+                                NumberAnimation { from: 0.2; to: 0.55; duration: 1100; easing.type: Easing.InOutQuad }
+                                NumberAnimation { from: 0.55; to: 0.2; duration: 1100; easing.type: Easing.InOutQuad }
+                            }
+                        }
+                    }
+
+                    // 33 ⅓ RPM Speed Pill
+                    Rectangle {
+                        width: 68
+                        height: 22
+                        radius: 11
+                        color: Theme.isDark ? "#1E2230" : "#E2E8F0"
+                        border.color: Theme.isDark ? "#333A4D" : "#CBD5E1"
+                        border.width: 1
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "33 ⅓ RPM"
+                            color: backend.isPlaying ? Theme.accent : Theme.textSecondary
+                            font.pixelSize: 10
+                            font.bold: true
+                        }
+                    }
+                }
+
+                // Right-Side Pitch Fader Track Accent
+                Item {
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.rightMargin: 22
+                    anchors.bottomMargin: 24
+                    width: 16
+                    height: 70
 
                     Rectangle {
                         anchors.centerIn: parent
-                        width: 10; height: 10; radius: 5
-                        color: "#1E293B"
+                        width: 3
+                        height: parent.height
+                        radius: 1.5
+                        color: Theme.isDark ? "#282D3D" : "#CBD5E1"
+                    }
+
+                    // Center Pitch Notch
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 10
+                        height: 1
+                        color: Theme.isDark ? "#4B556D" : "#94A3B8"
+                    }
+
+                    // Fader Knob
+                    Rectangle {
+                        x: (parent.width - width) / 2
+                        y: parent.height * 0.45
+                        width: 14
+                        height: 7
+                        radius: 2
+                        color: Theme.isDark ? "#475569" : "#64748B"
+                        border.color: Theme.isDark ? "#64748B" : "#94A3B8"
+                        border.width: 1
                     }
                 }
 
-                // Needle arm rod
+                // ---------------- Metallic Platter & Slipmat (金属铝合金转盘托盘) ----------------
                 Rectangle {
-                    x: 10; y: 12
-                    width: 5; height: 120
-                    radius: 2
-                    color: "#CBD5E1"
-                    rotation: 18
-                    transformOrigin: Item.Top
-                }
+                    id: platterRim
+                    width: turntableDeck.width * 0.74
+                    height: width
+                    radius: width / 2
+                    x: turntableDeck.width * 0.42 - width / 2
+                    y: turntableDeck.height * 0.52 - height / 2
+                    color: Theme.isDark ? "#1C202C" : "#CBD5E1"
+                    border.color: Theme.isDark ? "#475569" : "#94A3B8"
+                    border.width: 3
 
-                // Needle head / cartridge
-                Rectangle {
-                    x: 44; y: 125
-                    width: 14; height: 24
-                    radius: 3
-                    color: "#475569"
-                    border.color: Theme.accent; border.width: 1
-                }
-            }
+                    // Platter Strobe Rim Dots (Simulated metallic bezel)
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        radius: width / 2
+                        color: "transparent"
+                        border.color: Theme.isDark ? "#2D3446" : "#E2E8F0"
+                        border.width: 2
+                    }
 
-            // Vinyl Record Disc
-            Rectangle {
-                id: vinylDisc
-                width: Math.min(320, parent.width - 40)
-                height: width
-                radius: width / 2
-                anchors.centerIn: parent
-                color: "#111827"
-                border.color: "#334155"
-                border.width: 4
-
-                // Spinning animation when playing
-                NumberAnimation on rotation {
-                    from: 0
-                    to: 360
-                    duration: 25000
-                    loops: Animation.Infinite
-                    running: backend.isPlaying && root.opacity > 0
-                }
-
-                // Subtle Vinyl Grooves
-                Repeater {
-                    model: 5
-                    delegate: Rectangle {
+                    // Inner Platter Slipmat (深色抗静电毛毡唱垫)
+                    Rectangle {
                         anchors.centerIn: parent
-                        width: vinylDisc.width * (0.88 - index * 0.08)
+                        width: parent.width - 14
+                        height: width
+                        radius: width / 2
+                        color: Theme.isDark ? "#0D0E13" : "#1E293B"
+                        border.color: Theme.isDark ? "#1C202C" : "#334155"
+                        border.width: 1.5
+                    }
+                }
+
+                // ---------------- Vinyl Record Disc (高质感黑胶唱片本体) ----------------
+                Rectangle {
+                    id: vinylDisc
+                    width: platterRim.width - 20
+                    height: width
+                    radius: width / 2
+                    anchors.centerIn: platterRim
+                    color: "#0A0B0F"
+                    border.color: "#1E222D"
+                    border.width: 2
+
+                    // Continuous Smooth Rotation (Pauses and resumes without jumping to 0)
+                    NumberAnimation {
+                        id: vinylSpinAnim
+                        target: vinylDisc
+                        property: "rotation"
+                        from: 0
+                        to: 360
+                        duration: 20000
+                        loops: Animation.Infinite
+                        running: true
+                        paused: !backend.isPlaying || root.opacity === 0
+                    }
+
+                    // Lead-in Outer Groove
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: vinylDisc.width * 0.94
                         height: width
                         radius: width / 2
                         color: "transparent"
-                        border.color: "#1E293B"
+                        border.color: "#181B24"
                         border.width: 1
-                        opacity: 0.7
+                    }
+
+                    // Concentric High-Fidelity Music Grooves (音轨细纹)
+                    Repeater {
+                        model: [0.88, 0.82, 0.77, 0.71, 0.65, 0.59, 0.53]
+                        delegate: Rectangle {
+                            anchors.centerIn: parent
+                            width: vinylDisc.width * modelData
+                            height: width
+                            radius: width / 2
+                            color: "transparent"
+                            border.color: "#1A1D27"
+                            border.width: 1
+                            opacity: index % 2 === 0 ? 0.7 : 0.4
+                        }
+                    }
+
+                    // Run-Out Groove
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: vinylDisc.width * 0.48
+                        height: width
+                        radius: width / 2
+                        color: "transparent"
+                        border.color: "#141720"
+                        border.width: 2
+                    }
+
+                    // Center Label (中央纸质唱片标贴 & 专辑封面)
+                    Rectangle {
+                        id: albumCoverRec
+                        width: vinylDisc.width * 0.40
+                        height: width
+                        radius: width / 2
+                        anchors.centerIn: parent
+                        clip: true
+                        color: Theme.bgCard
+                        border.color: "#D4AF37" // Elegant gold foil rim
+                        border.width: 2
+
+                        Image {
+                            anchors.fill: parent
+                            source: backend.currentSong.coverUrl ? backend.currentSong.coverUrl : "qrc:/icons/app.svg"
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+
+                        // Label Inner Shading
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            color: "transparent"
+                            border.color: "rgba(0, 0, 0, 0.3)"
+                            border.width: 3
+                        }
+                    }
+
+                    // Center Spindle Hole & Metallic Pin
+                    Rectangle {
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: "#0A0B0E"
+                        border.color: "#94A3B8"
+                        border.width: 2
+                        anchors.centerIn: parent
+
+                        // Chrome Center Spindle Pin
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 10
+                            height: 10
+                            radius: 5
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: "#FFFFFF" }
+                                GradientStop { position: 0.5; color: "#CBD5E1" }
+                                GradientStop { position: 1.0; color: "#64748B" }
+                            }
+                        }
                     }
                 }
 
-                // Album Art inside vinyl record
-                Rectangle {
-                    id: albumCoverRec
-                    width: vinylDisc.width * 0.62
-                    height: width
-                    radius: width / 2
-                    anchors.centerIn: parent
-                    clip: true
-                    color: Theme.bgCard
-                    border.color: "#475569"
-                    border.width: 2
+                // Vinyl Specular Glare / Sheen Overlay (真实黑胶扇形双向反光，固定于光照方向)
+                Canvas {
+                    id: vinylSheenCanvas
+                    anchors.fill: vinylDisc
+                    antialiasing: true
+                    opacity: 0.22
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.reset();
+                        var cx = width / 2;
+                        var cy = height / 2;
+                        var r = width / 2 - 2;
 
-                    Image {
-                        anchors.fill: parent
-                        source: backend.currentSong.coverUrl ? backend.currentSong.coverUrl : "qrc:/icons/app.svg"
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
+                        function drawSheenWedge(a1, a2) {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.moveTo(cx, cy);
+                            ctx.arc(cx, cy, r, a1, a2);
+                            ctx.closePath();
+                            var grad = ctx.createRadialGradient(cx, cy, r * 0.38, cx, cy, r);
+                            grad.addColorStop(0, "rgba(255, 255, 255, 0.0)");
+                            grad.addColorStop(0.5, "rgba(255, 255, 255, 0.5)");
+                            grad.addColorStop(1.0, "rgba(255, 255, 255, 0.08)");
+                            ctx.fillStyle = grad;
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                        // Two opposing diagonal light reflections across grooves
+                        drawSheenWedge(-Math.PI * 0.38, -Math.PI * 0.16);
+                        drawSheenWedge(Math.PI * 0.62, Math.PI * 0.84);
                     }
                 }
 
-                // Center Spindle Hole
-                Rectangle {
-                    width: 32
-                    height: 32
-                    radius: 16
-                    color: "#0F172A"
-                    border.color: "#94A3B8"
-                    border.width: 3
-                    anchors.centerIn: parent
+                // ---------------- Fixed Tonearm Cradle / Rest (机身上的唱臂托架) ----------------
+                Item {
+                    id: armRest
+                    x: turntableDeck.width * 0.86
+                    y: turntableDeck.height * 0.44
+                    width: 14
+                    height: 24
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 8
+                        height: 16
+                        radius: 2
+                        color: Theme.isDark ? "#333A4D" : "#94A3B8"
+                        border.color: Theme.isDark ? "#4B556D" : "#64748B"
+                        border.width: 1
+                    }
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 12
+                        height: 4
+                        radius: 2
+                        color: Theme.isDark ? "#475569" : "#64748B"
+                    }
                 }
+
+                // ---------------- Realistic Gimbal Tonearm Assembly (高精细金属唱臂) ----------------
+                Item {
+                    id: tonearm
+                    x: turntableDeck.width * 0.81
+                    y: turntableDeck.height * 0.22
+                    width: 70
+                    height: 220
+                    z: 30
+                    transformOrigin: Item.TopLeft
+                    // Dynamic Realistic Arm Swing: Lands gently on record (15°), lifts off to arm rest (-20°)
+                    rotation: backend.isPlaying ? 15 : -20
+
+                    Behavior on rotation {
+                        NumberAnimation {
+                            duration: 750
+                            easing.type: Easing.InOutCubic
+                        }
+                    }
+
+                    // 1. Pivot Base Tower (圆台形双层金属轴承座)
+                    Rectangle {
+                        x: -18
+                        y: -18
+                        width: 36
+                        height: 36
+                        radius: 18
+                        color: Theme.isDark ? "#1E222F" : "#CBD5E1"
+                        border.color: Theme.isDark ? "#475569" : "#94A3B8"
+                        border.width: 2
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 22
+                            height: 22
+                            radius: 11
+                            color: Theme.isDark ? "#0F1118" : "#E2E8F0"
+                            border.color: Theme.isDark ? "#64748B" : "#CBD5E1"
+                            border.width: 1.5
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 8
+                                height: 8
+                                radius: 4
+                                color: Theme.isDark ? "#94A3B8" : "#475569"
+                            }
+                        }
+                    }
+
+                    // 2. Counterweight (后置重锤，位于轴承上方)
+                    Rectangle {
+                        x: -10
+                        y: -36
+                        width: 20
+                        height: 18
+                        radius: 3
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#94A3B8" }
+                            GradientStop { position: 0.5; color: "#CBD5E1" }
+                            GradientStop { position: 1.0; color: "#64748B" }
+                        }
+                        border.color: "#475569"
+                        border.width: 1
+
+                        // Counterweight calibration markings
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width
+                            height: 2
+                            color: "#334155"
+                        }
+                    }
+
+                    // 3. S-Shaped Polished Metal Arm Wand (流线型金属唱臂杆)
+                    Canvas {
+                        id: armWandCanvas
+                        x: -10
+                        y: -6
+                        width: 70
+                        height: 190
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            ctx.reset();
+                            ctx.lineWidth = 4.5;
+                            ctx.lineCap = "round";
+                            ctx.lineJoin = "round";
+
+                            var grad = ctx.createLinearGradient(0, 0, width, height);
+                            grad.addColorStop(0, "#E2E8F0");
+                            grad.addColorStop(0.5, "#CBD5E1");
+                            grad.addColorStop(1, "#94A3B8");
+                            ctx.strokeStyle = grad;
+
+                            // S-curve shape: from pivot downwards, bending gently outward then into headshell
+                            ctx.beginPath();
+                            ctx.moveTo(10, 8);
+                            ctx.bezierCurveTo(10, 50, 22, 100, 20, 140);
+                            ctx.lineTo(16, 175);
+                            ctx.stroke();
+                        }
+                    }
+
+                    // 4. Cartridge Headshell & Stylus (黑胶唱头壳与金质唱针)
+                    Item {
+                        x: 8
+                        y: 168
+                        width: 24
+                        height: 38
+                        rotation: -8
+
+                        // Cartridge Body
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 3
+                            color: Theme.isDark ? "#1E2433" : "#334155"
+                            border.color: Theme.accent
+                            border.width: 1.5
+
+                            // Accent decorative line
+                            Rectangle {
+                                anchors.top: parent.top
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.topMargin: 6
+                                height: 2
+                                color: Theme.accent
+                            }
+
+                            // Stylus Needle Tip (金质唱针尖)
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                anchors.left: parent.left
+                                anchors.bottomMargin: -3
+                                anchors.leftMargin: 4
+                                width: 3
+                                height: 5
+                                radius: 1
+                                color: "#F59E0B"
+                            }
+                        }
+
+                        // Finger Lift (唱头指提钩)
+                        Rectangle {
+                            x: parent.width - 2
+                            y: 8
+                            width: 10
+                            height: 3
+                            radius: 1.5
+                            color: "#94A3B8"
+                        }
+                    }
+                }
+
+                // Interactive Click on Deck/Record to Play/Pause
+                MouseArea {
+                    id: deckMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: backend.playPause()
+                    z: 50
+                }
+
+                ToolTip.visible: deckMouseArea.containsMouse
+                ToolTip.text: backend.isPlaying ? "点击唱机暂停播放" : "点击唱机开始播放"
             }
         }
 

@@ -252,6 +252,13 @@ ApplicationWindow {
             anchors.centerIn: parent
             z: 900
         }
+
+        Connections {
+            target: backend
+            function onPreviewLyricsReady(title, artist, lyrics) {
+                lyricsDrawer.open(title, artist, lyrics)
+            }
+        }
     }
 
     // 5. Bottom Player Bar

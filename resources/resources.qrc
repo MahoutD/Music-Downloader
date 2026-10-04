@@ -6,6 +6,7 @@
         <file>icons/kuwo.svg</file>
         <file>icons/all.svg</file>
         <file>icons/app.svg</file>
+        <file>icons/app.ico</file>
         <file>qml/qmldir</file>
         <file>qml/Theme.qml</file>
         <file>qml/Toast.qml</file>

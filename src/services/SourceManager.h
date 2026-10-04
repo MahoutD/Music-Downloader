@@ -83,6 +83,7 @@ public:
     Q_INVOKABLE bool exportSources(const QString &filePath);
     Q_INVOKABLE bool importSources(const QString &filePath);
     Q_INVOKABLE void resetDefaultSources();
+    Q_INVOKABLE void updateDefaultSources();
     Q_INVOKABLE void toggleSource(const QString &id, bool enabled);
 
 signals:
