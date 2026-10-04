@@ -645,7 +645,7 @@ Rectangle {
                             anchors.fill: parent
                             radius: width / 2
                             color: "transparent"
-                            border.color: "rgba(0, 0, 0, 0.3)"
+                            border.color: Qt.rgba(0, 0, 0, 0.3)
                             border.width: 3
                         }
                     }
