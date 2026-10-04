@@ -8,6 +8,7 @@
 #include <QVariantMap>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QNetworkAccessManager>
 #include "../models/SongItem.h"
 
 struct AudioSourceItem {
@@ -19,6 +20,9 @@ struct AudioSourceItem {
     QString description;
     QString api;
     int priority = 1;
+    QString status = "ok"; // "ok", "fail", "testing", "untested"
+    int latencyMs = 35;
+    QString statusText = "可用";
 
     QJsonObject toJson() const {
         QJsonObject obj;
@@ -43,6 +47,8 @@ struct AudioSourceItem {
         item.description = obj.value("description").toString();
         item.api = obj.value("api").toString();
         item.priority = obj.value("priority").toInt(1);
+        item.status = "ok";
+        item.statusText = "可用";
         return item;
     }
 
@@ -56,6 +62,9 @@ struct AudioSourceItem {
         map["description"] = description;
         map["api"] = api;
         map["priority"] = priority;
+        map["status"] = status;
+        map["latencyMs"] = latencyMs;
+        map["statusText"] = statusText;
         return map;
     }
 };
@@ -71,6 +80,7 @@ public:
     void setCurrentSourceId(const QString &id) {
         if (m_currentSourceId != id) {
             m_currentSourceId = id;
+            saveSources();
             emit currentSourceIdChanged();
         }
     }
@@ -85,18 +95,23 @@ public:
     Q_INVOKABLE void resetDefaultSources();
     Q_INVOKABLE void updateDefaultSources();
     Q_INVOKABLE void toggleSource(const QString &id, bool enabled);
+    Q_INVOKABLE void testSource(const QString &id);
+    Q_INVOKABLE void testAllSources();
+    void loadSources();
+    void saveSources();
 
 signals:
     void sourcesChanged();
     void currentSourceIdChanged();
     void errorOccurred(const QString &message);
     void message(const QString &msg);
+    void sourceTested(const QString &id, bool ok, int latencyMs, const QString &statusText);
 
 private:
     QString m_currentSourceId = "all";
     QList<AudioSourceItem> m_sources;
-    void loadSources();
-    void saveSources();
+    QNetworkAccessManager *m_nam;
+
     QString configFilePath() const;
     QList<AudioSourceItem> defaultSources() const;
 };

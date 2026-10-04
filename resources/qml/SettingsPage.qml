@@ -7,6 +7,8 @@ Rectangle {
 
     property string downloadDir: backend.downloadDir
     property int selectedQuality: backend.defaultQuality
+    property int preferredQuality: backend.preferredPlaybackQuality
+    property bool cacheEnabled: backend.cacheEnabled
     property bool downloadLyric: backend.downloadLyric
     property bool downloadCover: backend.downloadCover
     property int fileNameFormat: backend.fileNameFormat
@@ -18,6 +20,8 @@ Rectangle {
         function onSettingsChanged() {
             root.downloadDir = backend.downloadDir
             root.selectedQuality = backend.defaultQuality
+            root.preferredQuality = backend.preferredPlaybackQuality
+            root.cacheEnabled = backend.cacheEnabled
             root.downloadLyric = backend.downloadLyric
             root.downloadCover = backend.downloadCover
             root.fileNameFormat = backend.fileNameFormat
@@ -192,7 +196,7 @@ Rectangle {
                                     var dir = backend.chooseDirectory()
                                     if (dir && dir.length > 0) {
                                         root.downloadDir = dir
-                                        backend.saveSettings(dir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat)
+                                        backend.saveSettings(dir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
                                     }
                                 }
                             }
@@ -246,9 +250,9 @@ Rectangle {
 
                             Repeater {
                                 model: [
-                                    { name: "无损 SQ (FLAC)", val: 0 },
+                                    { name: "标准 (128k)", val: 0 },
                                     { name: "极高 HQ (320k)", val: 1 },
-                                    { name: "标准 (128k)", val: 2 }
+                                    { name: "无损 SQ (FLAC)", val: 2 }
                                 ]
                                 delegate: Rectangle {
                                     height: 32
@@ -398,7 +402,7 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat)
+                                    backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
                                 }
                             }
                         }
@@ -406,7 +410,215 @@ Rectangle {
                 }
             }
 
-            // ================= 3. 音源管理卡片 (导入、导出、默认音源) =================
+            // ================= 3. 播放与缓存设置卡片 =================
+            Rectangle {
+                width: parent.width
+                height: 185
+                radius: 10
+                color: Theme.bgCard
+                border.color: Theme.border
+                border.width: 1
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 18
+                    spacing: 14
+
+                    // Header
+                    Row {
+                        spacing: 8
+                        Text { text: "🎵"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
+                        Text {
+                            text: "播放与缓存设置"
+                            color: Theme.textPrimary
+                            font.pixelSize: 15
+                            font.bold: true
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    Rectangle { width: parent.width; height: 1; color: Theme.borderSubtle }
+
+                    // Row 1: Preferred Playback Quality
+                    Item {
+                        width: parent.width
+                        height: 36
+
+                        Text {
+                            text: "播放优先音质:"
+                            color: Theme.textSecondary
+                            font.pixelSize: 13
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 100
+                        }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 105
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 10
+
+                            Repeater {
+                                model: [
+                                    { name: "标准 (128k)", val: 0 },
+                                    { name: "极高 HQ (320k)", val: 1 },
+                                    { name: "无损 SQ (FLAC)", val: 2 }
+                                ]
+                                delegate: Rectangle {
+                                    height: 32
+                                    width: pbBtnTxt.implicitWidth + 24
+                                    radius: 16
+                                    color: root.preferredQuality === modelData.val ? Theme.accent : Theme.bgCardHover
+                                    border.color: root.preferredQuality === modelData.val ? Theme.accent : Theme.border
+                                    border.width: 1
+
+                                    Text {
+                                        id: pbBtnTxt
+                                        anchors.centerIn: parent
+                                        text: modelData.name
+                                        color: root.preferredQuality === modelData.val ? "#FFFFFF" : Theme.textPrimary
+                                        font.pixelSize: 12
+                                        font.bold: root.preferredQuality === modelData.val
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            root.preferredQuality = modelData.val
+                                            backend.preferredPlaybackQuality = modelData.val
+                                            backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Row 2: Playback Cache
+                    Item {
+                        width: parent.width
+                        height: 36
+
+                        Text {
+                            text: "本地播放缓存:"
+                            color: Theme.textSecondary
+                            font.pixelSize: 13
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 100
+                        }
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 105
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 16
+
+                            // Cache Enable Toggle
+                            Row {
+                                spacing: 8
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    width: 20
+                                    height: 20
+                                    radius: 4
+                                    color: root.cacheEnabled ? Theme.accent : Theme.bgInput
+                                    border.color: root.cacheEnabled ? Theme.accent : Theme.border
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "✓"
+                                        color: "#FFFFFF"
+                                        font.pixelSize: 12
+                                        visible: root.cacheEnabled
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            root.cacheEnabled = !root.cacheEnabled
+                                            backend.cacheEnabled = root.cacheEnabled
+                                            backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: "启用播放缓存 (加速已播歌曲并支持离线)"
+                                    color: Theme.textPrimary
+                                    font.pixelSize: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            // Cache Size Info
+                            Text {
+                                text: "当前占用: " + backend.cacheSizeText
+                                color: Theme.accent
+                                font.pixelSize: 12
+                                font.bold: true
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // Clear Cache Button
+                            Rectangle {
+                                height: 30
+                                width: 80
+                                radius: 6
+                                color: Theme.bgCardHover
+                                border.color: Theme.border
+                                border.width: 1
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "清理缓存"
+                                    color: "#EF4444"
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: backend.clearCache()
+                                }
+                            }
+
+                            // Open Cache Dir Button
+                            Rectangle {
+                                height: 30
+                                width: 96
+                                radius: 6
+                                color: Theme.bgCardHover
+                                border.color: Theme.border
+                                border.width: 1
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "打开缓存目录"
+                                    color: Theme.textPrimary
+                                    font.pixelSize: 11
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: backend.openCacheDirectory()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ================= 4. 音源管理卡片 (导入、导出、默认音源) =================
             Rectangle {
                 width: parent.width
                 height: 470
@@ -551,6 +763,27 @@ Rectangle {
                                     onClicked: backend.resetDefaultSources()
                                 }
                             }
+
+                            // 5. 测试全部音源
+                            Rectangle {
+                                height: 34
+                                width: 100
+                                radius: 6
+                                color: "#8B5CF6"
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 4
+                                    Text { text: "⚡"; font.pixelSize: 11 }
+                                    Text { text: "测试全部"; color: "#FFFFFF"; font.pixelSize: 12; font.bold: true }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: backend.testAllSources()
+                                }
+                            }
                         }
                     }
 
@@ -686,7 +919,7 @@ Rectangle {
                             Text { text: "音源名称 / 标识"; color: Theme.textMuted; font.pixelSize: 11; font.bold: true; width: 220; anchors.verticalCenter: parent.verticalCenter }
                             Text { text: "接口描述与特性"; color: Theme.textMuted; font.pixelSize: 11; font.bold: true; width: 280; anchors.verticalCenter: parent.verticalCenter }
                             Text { text: "默认属性"; color: Theme.textMuted; font.pixelSize: 11; font.bold: true; width: 90; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: "状态 / 开关"; color: Theme.textMuted; font.pixelSize: 11; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "可用状态 / 测试"; color: Theme.textMuted; font.pixelSize: 11; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
                         }
                     }
 
@@ -800,42 +1033,70 @@ Rectangle {
                                     }
                                 }
 
-                                // Enable/Disable Switch
+                                // Availability Status & Test
                                 Row {
-                                    spacing: 8
+                                    spacing: 10
                                     anchors.verticalCenter: parent.verticalCenter
 
+                                    // Status Badge
                                     Rectangle {
-                                        width: 40
-                                        height: 22
-                                        radius: 11
-                                        color: modelData.enabled ? "#10B981" : "#475569"
-
-                                        Rectangle {
-                                            width: 18
-                                            height: 18
-                                            radius: 9
-                                            color: "#FFFFFF"
-                                            x: modelData.enabled ? 20 : 2
-                                            anchors.verticalCenter: parent.verticalCenter
-
-                                            Behavior on x {
-                                                NumberAnimation { duration: 150 }
-                                            }
+                                        height: 24
+                                        width: Math.max(76, sText.implicitWidth + 16)
+                                        radius: 12
+                                        color: {
+                                            if (modelData.status === 2) return "#065F46" // green
+                                            if (modelData.status === 3) return "#7F1D1D" // red
+                                            if (modelData.status === 1) return "#1E3A8A" // blue
+                                            return "#374151" // gray
                                         }
+                                        border.color: {
+                                            if (modelData.status === 2) return "#10B981"
+                                            if (modelData.status === 3) return "#EF4444"
+                                            if (modelData.status === 1) return "#3B82F6"
+                                            return "#6B7280"
+                                        }
+                                        border.width: 1
 
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: backend.toggleSource(modelData.id, !modelData.enabled)
+                                        Text {
+                                            id: sText
+                                            anchors.centerIn: parent
+                                            text: modelData.statusText ? modelData.statusText : (modelData.status === 2 ? "可用" : (modelData.status === 3 ? "不可用" : "未测试"))
+                                            color: {
+                                                if (modelData.status === 2) return "#34D399"
+                                                if (modelData.status === 3) return "#F87171"
+                                                if (modelData.status === 1) return "#60A5FA"
+                                                return "#9CA3AF"
+                                            }
+                                            font.pixelSize: 11
+                                            font.bold: true
                                         }
                                     }
 
-                                    Text {
-                                        text: modelData.enabled ? "已启用" : "已停用"
-                                        color: modelData.enabled ? "#10B981" : Theme.textMuted
-                                        font.pixelSize: 11
-                                        anchors.verticalCenter: parent.verticalCenter
+                                    // Test Button
+                                    Rectangle {
+                                        height: 26
+                                        width: 68
+                                        radius: 13
+                                        color: testBtnMouse.containsMouse ? Theme.accent : Theme.bgCardHover
+                                        border.color: testBtnMouse.containsMouse ? Theme.accent : Theme.border
+                                        border.width: 1
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData.status === 1 ? "测试中" : "⚡ 测试"
+                                            color: testBtnMouse.containsMouse ? "#FFFFFF" : Theme.textPrimary
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                        }
+
+                                        MouseArea {
+                                            id: testBtnMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            enabled: modelData.status !== 1
+                                            onClicked: backend.testSource(modelData.id)
+                                        }
                                     }
                                 }
                             }
@@ -895,7 +1156,7 @@ Rectangle {
                                     font.bold: true
                                 }
                                 Text {
-                                    text: "v2.0.0"
+                                    text: "v1.0.0"
                                     color: Theme.accent
                                     font.pixelSize: 11
                                     font.bold: true

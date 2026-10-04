@@ -1,3 +1,7 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "AppBridge.h"
 #include <QDesktopServices>
 #include <QFileDialog>
@@ -15,6 +19,11 @@ AppBridge::AppBridge(MusicService *musicService,
       m_player(player),
       m_dlManager(dlManager),
       m_sourceManager(sourceManager) {
+
+    // Restore saved settings into player
+    auto &settings = SettingsModel::instance();
+    m_playMode = settings.playMode();
+    m_player->setVolume(settings.volume());
 
     // Player Signal Connections
     connect(m_player, &MusicPlayer::currentSongChanged, this, [this](const SongItem &song) {
@@ -78,6 +87,13 @@ AppBridge::AppBridge(MusicService *musicService,
     connect(m_sourceManager, &SourceManager::errorOccurred, this, [this](const QString &err) {
         emit showToast(err, true);
     });
+}
+
+AppBridge::~AppBridge() {
+    auto &s = SettingsModel::instance();
+    s.setPlayMode(m_playMode);
+    s.setVolume(m_player->volume());
+    s.save();
 }
 
 QVariantMap AppBridge::currentSong() const {
@@ -194,7 +210,8 @@ void AppBridge::playSong(const QVariantMap &songMap, int quality) {
     }
     emit currentIndexChanged();
 
-    QualityType q = (quality >= 0) ? static_cast<QualityType>(quality) : m_player->playbackQuality();
+    QualityType q = (quality >= 0) ? static_cast<QualityType>(quality) 
+                                   : SettingsModel::instance().preferredPlaybackQuality();
     m_player->playSong(s, q);
     fetchLyrics(songMap);
 }
@@ -204,57 +221,47 @@ int AppBridge::playbackQuality() const {
 }
 
 void AppBridge::setPlaybackQuality(int quality) {
-    if (quality < 0 || quality > 2) return;
-    m_player->setPlaybackQuality(static_cast<QualityType>(quality));
-    emit playbackQualityChanged();
-    emit showToast(QString("已切换播放音质为: %1").arg(playbackQualityName()), false);
+    QualityType q = static_cast<QualityType>(qBound(0, quality, 2));
+    m_player->setPlaybackQuality(q);
 }
 
 QString AppBridge::playbackQualityName() const {
     switch (m_player->playbackQuality()) {
-        case QualityType::Standard_128k: return "128k 标准品质";
-        case QualityType::High_320k: return "320k 高品音质";
-        case QualityType::Lossless_FLAC: return "FLAC 无损音质";
-        default: return "320k";
+        case QualityType::Standard_128k: return "标准 128k";
+        case QualityType::High_320k: return "极高 320k";
+        case QualityType::Lossless_FLAC: return "无损 FLAC";
+        default: return "标准";
     }
 }
 
 void AppBridge::addToPlaylist(const QVariantMap &songMap) {
     SongItem s = SongItem::fromMap(songMap);
-    if (s.id.isEmpty() || s.title.isEmpty()) return;
+    if (s.id.isEmpty()) return;
 
     for (const auto &item : m_playlist) {
         if (item.id == s.id) {
-            emit showToast(QString("《%1》已在播放列表中").arg(s.title), false);
+            emit showToast("歌曲已在播放列表中", false);
             return;
         }
     }
 
     m_playlist.append(s);
     emit playlistChanged();
-    emit showToast(QString("已将《%1》添加到播放列表").arg(s.title), false);
+    emit showToast(QString("已添加《%1》至播放列表").arg(s.title), false);
 }
 
 void AppBridge::removeFromPlaylist(int index) {
-    if (index < 0 || index >= m_playlist.size()) return;
-
-    m_playlist.removeAt(index);
-    if (index == m_currentIndex) {
-        if (m_playlist.isEmpty()) {
+    if (index >= 0 && index < m_playlist.size()) {
+        m_playlist.removeAt(index);
+        if (m_currentIndex == index) {
             m_currentIndex = -1;
-            m_player->stop();
-        } else {
-            if (m_currentIndex >= m_playlist.size()) {
-                m_currentIndex = 0;
-            }
-            m_player->playSong(m_playlist[m_currentIndex]);
+            emit currentIndexChanged();
+        } else if (m_currentIndex > index) {
+            m_currentIndex--;
+            emit currentIndexChanged();
         }
-    } else if (index < m_currentIndex) {
-        m_currentIndex--;
+        emit playlistChanged();
     }
-
-    emit playlistChanged();
-    emit currentIndexChanged();
 }
 
 void AppBridge::clearPlaylist() {
@@ -263,38 +270,27 @@ void AppBridge::clearPlaylist() {
     m_player->stop();
     emit playlistChanged();
     emit currentIndexChanged();
-    emit showToast("播放列表已清空", false);
 }
 
 void AppBridge::playAtIndex(int index) {
-    if (index < 0 || index >= m_playlist.size()) return;
-    m_currentIndex = index;
-    emit currentIndexChanged();
-    m_player->playSong(m_playlist[index]);
-    fetchLyrics(m_playlist[index].toMap());
+    if (index >= 0 && index < m_playlist.size()) {
+        m_currentIndex = index;
+        emit currentIndexChanged();
+        m_player->playSong(m_playlist[index], SettingsModel::instance().preferredPlaybackQuality());
+        fetchLyrics(m_playlist[index].toMap());
+    }
 }
 
 void AppBridge::previousTrack() {
     if (m_playlist.isEmpty()) return;
 
     if (m_playMode == 3) { // Random
-        if (m_playlist.size() > 1) {
-            int nextIdx = m_currentIndex;
-            while (nextIdx == m_currentIndex) {
-                nextIdx = QRandomGenerator::global()->bounded(m_playlist.size());
-            }
-            m_currentIndex = nextIdx;
-        }
+        m_currentIndex = QRandomGenerator::global()->bounded(m_playlist.size());
     } else {
-        if (m_currentIndex > 0) {
-            m_currentIndex--;
-        } else {
-            m_currentIndex = m_playlist.size() - 1;
-        }
+        m_currentIndex = (m_currentIndex - 1 + m_playlist.size()) % m_playlist.size();
     }
-
     emit currentIndexChanged();
-    m_player->playSong(m_playlist[m_currentIndex]);
+    m_player->playSong(m_playlist[m_currentIndex], SettingsModel::instance().preferredPlaybackQuality());
     fetchLyrics(m_playlist[m_currentIndex].toMap());
 }
 
@@ -306,36 +302,17 @@ void AppBridge::nextTrack() {
     if (m_playlist.isEmpty()) return;
 
     if (m_playMode == 3) { // Random
-        if (m_playlist.size() > 1) {
-            int nextIdx = m_currentIndex;
-            while (nextIdx == m_currentIndex) {
-                nextIdx = QRandomGenerator::global()->bounded(m_playlist.size());
-            }
-            m_currentIndex = nextIdx;
-        }
+        m_currentIndex = QRandomGenerator::global()->bounded(m_playlist.size());
     } else {
-        if (m_currentIndex + 1 < m_playlist.size()) {
-            m_currentIndex++;
-        } else if (m_playMode == 1) { // Loop all
-            m_currentIndex = 0;
-        } else { // Sequential
-            stop();
-            emit showToast("已播放到列表最后一首歌曲", false);
-            return;
-        }
+        m_currentIndex = (m_currentIndex + 1) % m_playlist.size();
     }
-
     emit currentIndexChanged();
-    m_player->playSong(m_playlist[m_currentIndex]);
+    m_player->playSong(m_playlist[m_currentIndex], SettingsModel::instance().preferredPlaybackQuality());
     fetchLyrics(m_playlist[m_currentIndex].toMap());
 }
 
 void AppBridge::stop() {
     m_player->stop();
-    m_isPlaying = false;
-    m_position = 0;
-    emit playbackStateChanged();
-    emit positionChanged();
 }
 
 void AppBridge::seek(qint64 posMs) {
@@ -344,22 +321,29 @@ void AppBridge::seek(qint64 posMs) {
 
 void AppBridge::setVolume(int vol) {
     m_player->setVolume(vol);
+    SettingsModel::instance().setVolume(vol);
     emit volumeChanged();
 }
 
 void AppBridge::setPlayMode(int mode) {
-    m_playMode = mode % 4;
-    emit playModeChanged();
-    QStringList modeNames = {"顺序播放", "列表循环", "单曲循环", "随机播放"};
-    emit showToast(QString("切换播放模式: %1").arg(modeNames[m_playMode]), false);
+    if (m_playMode != mode) {
+        m_playMode = mode;
+        SettingsModel::instance().setPlayMode(mode);
+        emit playModeChanged();
+    }
 }
 
 void AppBridge::fetchLyrics(const QVariantMap &songMap) {
     SongItem s = SongItem::fromMap(songMap);
+    if (s.id.isEmpty()) return;
+
     m_service->getLyric(s, [this, s](bool ok, const QString &lrc) {
-        // Only update currentLyrics if this is still the currently playing song!
         if (m_currentSong.id == s.id) {
-            m_currentLyrics = ok ? lrc : "暂无歌词信息";
+            if (ok && !lrc.isEmpty()) {
+                m_currentLyrics = lrc;
+            } else {
+                m_currentLyrics = "[00:00.00]暂无歌词，请欣赏纯音乐\n";
+            }
             emit lyricsChanged();
         }
     });
@@ -367,11 +351,11 @@ void AppBridge::fetchLyrics(const QVariantMap &songMap) {
 
 void AppBridge::previewLyrics(const QVariantMap &songMap) {
     SongItem s = SongItem::fromMap(songMap);
-    if (s.id.isEmpty() || s.title.isEmpty()) return;
+    if (s.id.isEmpty()) return;
 
     m_service->getLyric(s, [this, s](bool ok, const QString &lrc) {
-        QString lyrics = ok ? lrc : "暂无歌词信息";
-        emit previewLyricsReady(s.title, s.artist, lyrics);
+        QString displayLrc = (ok && !lrc.isEmpty()) ? lrc : "[00:00.00]暂无歌词，请欣赏纯音乐\n";
+        emit previewLyricsReady(s.title, s.artist, displayLrc);
     });
 }
 
@@ -380,7 +364,7 @@ void AppBridge::onSongFinished() {
 
     if (m_playMode == 2) { // Single loop
         seek(0);
-        m_player->playSong(m_playlist[m_currentIndex]);
+        m_player->playSong(m_playlist[m_currentIndex], SettingsModel::instance().preferredPlaybackQuality());
     } else {
         nextTrack();
     }
@@ -473,23 +457,36 @@ void AppBridge::toggleSource(const QString &id, bool enabled) {
     m_sourceManager->toggleSource(id, enabled);
 }
 
-// --- Settings APIs ---
-void AppBridge::saveSettings(const QString &dir, int quality, bool lyric, bool cover, int format) {
+void AppBridge::testSource(const QString &id) {
+    m_sourceManager->testSource(id);
+}
+
+void AppBridge::testAllSources() {
+    m_sourceManager->testAllSources();
+}
+
+// --- Settings & Cache APIs ---
+void AppBridge::saveSettings(const QString &dir, int quality, bool lyric, bool cover, int format, int preferredPlaybackQuality, bool cacheEnabled) {
     auto &s = SettingsModel::instance();
     s.setDownloadDir(dir);
-    s.setDefaultQuality(static_cast<QualityType>(quality));
+    s.setDefaultQuality(static_cast<QualityType>(qBound(0, quality, 2)));
     s.setDownloadLyrics(lyric);
     s.setDownloadCover(cover);
     s.setFileNameFormat(format);
+    if (preferredPlaybackQuality >= 0) {
+        s.setPreferredPlaybackQuality(static_cast<QualityType>(qBound(0, preferredPlaybackQuality, 2)));
+    }
+    s.setCacheEnabled(cacheEnabled);
     s.save();
     emit settingsChanged();
-    emit showToast("设置已成功保存！", false);
+    emit cacheSizeChanged();
+    emit showToast("设置已保存并写入配置文件！", false);
 }
 
 QString AppBridge::chooseDirectory() {
     QString current = downloadDir();
     if (current.isEmpty() || !QDir(current).exists()) {
-        current = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+        current = QDir(QCoreApplication::applicationDirPath()).filePath("download");
     }
     QString dir = QFileDialog::getExistingDirectory(nullptr, "选择音乐下载保存目录", current);
     return dir;
@@ -501,4 +498,17 @@ QString AppBridge::chooseFileDialog(bool isSave, const QString &filter) {
     } else {
         return QFileDialog::getOpenFileName(nullptr, "导入音源配置文件", "", filter);
     }
+}
+
+void AppBridge::clearCache() {
+    SettingsModel::instance().clearCache();
+    emit cacheSizeChanged();
+    emit showToast("播放加速缓存已全部清理完毕！", false);
+}
+
+void AppBridge::openCacheDirectory() {
+    QString dir = SettingsModel::instance().cacheDir();
+    QDir d(dir);
+    if (!d.exists()) d.mkpath(".");
+    QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
 }

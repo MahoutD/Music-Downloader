@@ -2,9 +2,14 @@
 #define SETTINGSMODEL_H
 
 #include <QString>
-#include <QSettings>
+#include <QCoreApplication>
 #include <QStandardPaths>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDebug>
 #include "SongItem.h"
 
 class SettingsModel {
@@ -14,43 +19,144 @@ public:
         return inst;
     }
 
+    static QString configFilePath() {
+        QString appDir = QCoreApplication::applicationDirPath();
+        QString localConfig = QDir(appDir).filePath("config.json");
+        return localConfig;
+    }
+
     void load() {
-        QSettings s("MusicDownloader", "Settings");
-        QString defaultMusicDir = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-        if (defaultMusicDir.isEmpty()) {
-            defaultMusicDir = QDir::currentPath() + "/Downloads";
-        } else {
-            defaultMusicDir += "/MusicDownloads";
+        QString appDir = QCoreApplication::applicationDirPath();
+        QString defaultDownload = QDir(appDir).filePath("download");
+        QString defaultCache = QDir(appDir).filePath("cache");
+
+        m_downloadDir = QDir::cleanPath(defaultDownload);
+        m_cacheDir = QDir::cleanPath(defaultCache);
+        m_defaultQuality = QualityType::Standard_128k;       // 0: 标准 128k
+        m_preferredPlaybackQuality = QualityType::High_320k;  // 1: 极高 320k
+        m_downloadLyrics = true;
+        m_downloadCover = true;
+        m_maxConcurrentDownloads = 5;
+        m_fileNameFormat = 0; // 0: 歌手 - 歌名, 1: 歌名 - 歌手
+        m_cacheEnabled = true;
+        m_maxCacheSizeMb = 1024;
+        m_playMode = 0;
+        m_volume = 80;
+        m_themeMode = 0;
+        m_desktopLyricsEnabled = false;
+
+        QFile file(configFilePath());
+        if (file.exists() && file.open(QIODevice::ReadOnly)) {
+            QByteArray data = file.readAll();
+            file.close();
+
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                QJsonObject root = doc.object();
+                QJsonObject s = root.value("settings").toObject();
+                if (!s.isEmpty()) {
+                    if (s.contains("downloadDir")) {
+                        QString dir = s.value("downloadDir").toString();
+                        if (!dir.trimmed().isEmpty()) m_downloadDir = QDir::cleanPath(dir);
+                    }
+                    if (s.contains("cacheDir")) {
+                        QString cdir = s.value("cacheDir").toString();
+                        if (!cdir.trimmed().isEmpty()) m_cacheDir = QDir::cleanPath(cdir);
+                    }
+                    if (s.contains("defaultQuality")) {
+                        m_defaultQuality = static_cast<QualityType>(qBound(0, s.value("defaultQuality").toInt(), 2));
+                    }
+                    if (s.contains("preferredPlaybackQuality")) {
+                        m_preferredPlaybackQuality = static_cast<QualityType>(qBound(0, s.value("preferredPlaybackQuality").toInt(), 2));
+                    }
+                    if (s.contains("downloadLyrics")) {
+                        m_downloadLyrics = s.value("downloadLyrics").toBool(true);
+                    }
+                    if (s.contains("downloadCover")) {
+                        m_downloadCover = s.value("downloadCover").toBool(true);
+                    }
+                    if (s.contains("maxConcurrentDownloads")) {
+                        m_maxConcurrentDownloads = qBound(1, s.value("maxConcurrentDownloads").toInt(5), 5);
+                    }
+                    if (s.contains("fileNameFormat")) {
+                        m_fileNameFormat = s.value("fileNameFormat").toInt(0);
+                    }
+                    if (s.contains("cacheEnabled")) {
+                        m_cacheEnabled = s.value("cacheEnabled").toBool(true);
+                    }
+                    if (s.contains("maxCacheSizeMb")) {
+                        m_maxCacheSizeMb = s.value("maxCacheSizeMb").toInt(1024);
+                    }
+                    if (s.contains("playMode")) {
+                        m_playMode = s.value("playMode").toInt(0);
+                    }
+                    if (s.contains("volume")) {
+                        m_volume = s.value("volume").toInt(80);
+                    }
+                    if (s.contains("themeMode")) {
+                        m_themeMode = s.value("themeMode").toInt(0);
+                    }
+                    if (s.contains("desktopLyricsEnabled")) {
+                        m_desktopLyricsEnabled = s.value("desktopLyricsEnabled").toBool(false);
+                    }
+                }
+            }
         }
 
-        m_downloadDir = s.value("downloadDir", defaultMusicDir).toString();
-        m_defaultQuality = static_cast<QualityType>(s.value("defaultQuality", static_cast<int>(QualityType::High_320k)).toInt());
-        m_downloadLyrics = s.value("downloadLyrics", true).toBool();
-        m_downloadCover = s.value("downloadCover", true).toBool();
-        m_maxConcurrentDownloads = qBound(1, s.value("maxConcurrentDownloads", 5).toInt(), 5);
-        m_fileNameFormat = s.value("fileNameFormat", 0).toInt(); // 0: 歌手 - 歌名, 1: 歌名 - 歌手
-
-        QDir dir(m_downloadDir);
-        if (!dir.exists()) {
-            dir.mkpath(".");
-        }
+        // Ensure download and cache directories exist
+        QDir().mkpath(m_downloadDir);
+        QDir().mkpath(m_cacheDir);
     }
 
     void save() {
-        QSettings s("MusicDownloader", "Settings");
-        s.setValue("downloadDir", m_downloadDir);
-        s.setValue("defaultQuality", static_cast<int>(m_defaultQuality));
-        s.setValue("downloadLyrics", m_downloadLyrics);
-        s.setValue("downloadCover", m_downloadCover);
-        s.setValue("maxConcurrentDownloads", m_maxConcurrentDownloads);
-        s.setValue("fileNameFormat", m_fileNameFormat);
+        QJsonObject root;
+        QFile file(configFilePath());
+        if (file.exists() && file.open(QIODevice::ReadOnly)) {
+            QByteArray data = file.readAll();
+            file.close();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                root = doc.object();
+            }
+        }
+
+        root["version"] = "1.0.0";
+
+        QJsonObject s = root.value("settings").toObject();
+        s["downloadDir"] = m_downloadDir;
+        s["cacheDir"] = m_cacheDir;
+        s["defaultQuality"] = static_cast<int>(m_defaultQuality);
+        s["preferredPlaybackQuality"] = static_cast<int>(m_preferredPlaybackQuality);
+        s["downloadLyrics"] = m_downloadLyrics;
+        s["downloadCover"] = m_downloadCover;
+        s["maxConcurrentDownloads"] = m_maxConcurrentDownloads;
+        s["fileNameFormat"] = m_fileNameFormat;
+        s["cacheEnabled"] = m_cacheEnabled;
+        s["maxCacheSizeMb"] = m_maxCacheSizeMb;
+        s["playMode"] = m_playMode;
+        s["volume"] = m_volume;
+        s["themeMode"] = m_themeMode;
+        s["desktopLyricsEnabled"] = m_desktopLyricsEnabled;
+
+        root["settings"] = s;
+
+        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+            file.close();
+        }
     }
 
     QString downloadDir() const { return m_downloadDir; }
-    void setDownloadDir(const QString &dir) { m_downloadDir = dir; }
+    void setDownloadDir(const QString &dir) {
+        m_downloadDir = QDir::cleanPath(dir);
+        QDir().mkpath(m_downloadDir);
+    }
 
     QualityType defaultQuality() const { return m_defaultQuality; }
     void setDefaultQuality(QualityType q) { m_defaultQuality = q; }
+
+    QualityType preferredPlaybackQuality() const { return m_preferredPlaybackQuality; }
+    void setPreferredPlaybackQuality(QualityType q) { m_preferredPlaybackQuality = q; }
 
     bool downloadLyrics() const { return m_downloadLyrics; }
     void setDownloadLyrics(bool val) { m_downloadLyrics = val; }
@@ -63,6 +169,53 @@ public:
 
     int fileNameFormat() const { return m_fileNameFormat; }
     void setFileNameFormat(int fmt) { m_fileNameFormat = fmt; }
+
+    QString cacheDir() const { return m_cacheDir; }
+    bool cacheEnabled() const { return m_cacheEnabled; }
+    void setCacheEnabled(bool enabled) { m_cacheEnabled = enabled; }
+
+    int maxCacheSizeMb() const { return m_maxCacheSizeMb; }
+    void setMaxCacheSizeMb(int mb) { m_maxCacheSizeMb = mb; }
+
+    int playMode() const { return m_playMode; }
+    void setPlayMode(int mode) { m_playMode = mode; }
+
+    int volume() const { return m_volume; }
+    void setVolume(int vol) { m_volume = vol; }
+
+    int themeMode() const { return m_themeMode; }
+    void setThemeMode(int theme) { m_themeMode = theme; }
+
+    bool desktopLyricsEnabled() const { return m_desktopLyricsEnabled; }
+    void setDesktopLyricsEnabled(bool en) { m_desktopLyricsEnabled = en; }
+
+    qint64 cacheSizeBytes() const {
+        QDir dir(m_cacheDir);
+        if (!dir.exists()) return 0;
+        qint64 total = 0;
+        const auto fileList = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+        for (const auto &fi : fileList) {
+            total += fi.size();
+        }
+        return total;
+    }
+
+    QString formattedCacheSize() const {
+        qint64 bytes = cacheSizeBytes();
+        if (bytes <= 0) return "0.0 MB";
+        double mb = bytes / (1024.0 * 1024.0);
+        return QString("%1 MB").arg(QString::number(mb, 'f', 1));
+    }
+
+    void clearCache() {
+        QDir dir(m_cacheDir);
+        if (dir.exists()) {
+            const auto fileList = dir.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+            for (const auto &fi : fileList) {
+                QFile::remove(fi.absoluteFilePath());
+            }
+        }
+    }
 
     QString formatFileName(const SongItem &song, const QString &extension) const {
         QString baseName;
@@ -101,11 +254,19 @@ private:
     }
 
     QString m_downloadDir;
-    QualityType m_defaultQuality = QualityType::High_320k;
+    QString m_cacheDir;
+    QualityType m_defaultQuality = QualityType::Standard_128k;
+    QualityType m_preferredPlaybackQuality = QualityType::High_320k;
     bool m_downloadLyrics = true;
     bool m_downloadCover = true;
     int m_maxConcurrentDownloads = 5;
     int m_fileNameFormat = 0;
+    bool m_cacheEnabled = true;
+    int m_maxCacheSizeMb = 1024;
+    int m_playMode = 0;
+    int m_volume = 80;
+    int m_themeMode = 0;
+    bool m_desktopLyricsEnabled = false;
 };
 
 #endif // SETTINGSMODEL_H

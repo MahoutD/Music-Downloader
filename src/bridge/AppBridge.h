@@ -18,6 +18,9 @@
 class AppBridge : public QObject {
     Q_OBJECT
 
+    // App Version
+    Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
+
     // Player Properties
     Q_PROPERTY(QVariantMap currentSong READ currentSong NOTIFY currentSongChanged)
     Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY playbackStateChanged)
@@ -43,9 +46,12 @@ class AppBridge : public QObject {
     // Settings Properties
     Q_PROPERTY(QString downloadDir READ downloadDir NOTIFY settingsChanged)
     Q_PROPERTY(int defaultQuality READ defaultQuality NOTIFY settingsChanged)
+    Q_PROPERTY(int preferredPlaybackQuality READ preferredPlaybackQuality NOTIFY settingsChanged)
     Q_PROPERTY(bool downloadLyric READ downloadLyric NOTIFY settingsChanged)
     Q_PROPERTY(bool downloadCover READ downloadCover NOTIFY settingsChanged)
     Q_PROPERTY(int fileNameFormat READ fileNameFormat NOTIFY settingsChanged)
+    Q_PROPERTY(QString cacheSizeText READ cacheSizeText NOTIFY cacheSizeChanged)
+    Q_PROPERTY(bool cacheEnabled READ cacheEnabled NOTIFY settingsChanged)
 
 public:
     explicit AppBridge(MusicService *musicService,
@@ -53,6 +59,9 @@ public:
                        DownloadManager *dlManager,
                        SourceManager *sourceManager,
                        QObject *parent = nullptr);
+    ~AppBridge();
+
+    QString appVersion() const { return "1.0.0"; }
 
     // Getters for Properties
     QVariantMap currentSong() const;
@@ -79,10 +88,13 @@ public:
 
     QString downloadDir() const { return SettingsModel::instance().downloadDir(); }
     int defaultQuality() const { return static_cast<int>(SettingsModel::instance().defaultQuality()); }
+    int preferredPlaybackQuality() const { return static_cast<int>(SettingsModel::instance().preferredPlaybackQuality()); }
     bool downloadLyric() const { return SettingsModel::instance().downloadLyrics(); }
     bool downloadCover() const { return SettingsModel::instance().downloadCover(); }
     int fileNameFormat() const { return SettingsModel::instance().fileNameFormat(); }
     int playbackQuality() const;
+    QString cacheSizeText() const { return SettingsModel::instance().formattedCacheSize(); }
+    bool cacheEnabled() const { return SettingsModel::instance().cacheEnabled(); }
 
     // --- Search APIs ---
     Q_INVOKABLE void search(const QString &keyword, int platform, int page = 1, int pageSize = 20);
@@ -128,11 +140,15 @@ public:
     Q_INVOKABLE void resetDefaultSources();
     Q_INVOKABLE void updateDefaultSources();
     Q_INVOKABLE void toggleSource(const QString &id, bool enabled);
+    Q_INVOKABLE void testSource(const QString &id);
+    Q_INVOKABLE void testAllSources();
 
-    // --- Settings APIs ---
-    Q_INVOKABLE void saveSettings(const QString &dir, int quality, bool lyric, bool cover, int format);
+    // --- Settings & Cache APIs ---
+    Q_INVOKABLE void saveSettings(const QString &dir, int quality, bool lyric, bool cover, int format, int preferredPlaybackQuality = -1, bool cacheEnabled = true);
     Q_INVOKABLE QString chooseDirectory();
     Q_INVOKABLE QString chooseFileDialog(bool isSave, const QString &filter = "JSON files (*.json)");
+    Q_INVOKABLE void clearCache();
+    Q_INVOKABLE void openCacheDirectory();
 
 signals:
     // Search Signals
@@ -167,6 +183,7 @@ signals:
 
     // Settings Signals
     void settingsChanged();
+    void cacheSizeChanged();
 
     // General Notification
     void showToast(const QString &msg, bool isError = false);

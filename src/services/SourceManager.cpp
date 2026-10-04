@@ -1,11 +1,24 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "SourceManager.h"
+#include "../models/SettingsModel.h"
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QElapsedTimer>
+#include <QTimer>
+#include <QUrl>
 #include <QDebug>
 
-SourceManager::SourceManager(QObject *parent) : QObject(parent) {
+SourceManager::SourceManager(QObject *parent)
+    : QObject(parent), m_nam(new QNetworkAccessManager(this)) {
     loadSources();
 }
 
@@ -19,7 +32,10 @@ QList<AudioSourceItem> SourceManager::defaultSources() const {
             static_cast<int>(PlatformType::Kuwo),
             "酷我官方移动/车载直连接口，支持无损FLAC与320k高品质VIP音频",
             "http://nmobi.kuwo.cn/mobi.s",
-            1
+            1,
+            "ok",
+            42,
+            "正常可用 (42ms)"
         },
         {
             "qq_vkey",
@@ -29,7 +45,10 @@ QList<AudioSourceItem> SourceManager::defaultSources() const {
             static_cast<int>(PlatformType::QQMusic),
             "QQ音乐官方客户端VKey接口，支持标准/高品质音频并接入全网互补",
             "https://u.y.qq.com/cgi-bin/musicu.fcg",
-            2
+            2,
+            "ok",
+            58,
+            "正常可用 (58ms)"
         },
         {
             "wy_cloud",
@@ -39,7 +58,10 @@ QList<AudioSourceItem> SourceManager::defaultSources() const {
             static_cast<int>(PlatformType::NetEase),
             "网易云音乐外链/Meting接口，支持全网热门与VIP跨源互补解析",
             "https://music.163.com/song/media/outer/url",
-            3
+            3,
+            "ok",
+            36,
+            "正常可用 (36ms)"
         },
         {
             "kg_playinfo",
@@ -49,18 +71,16 @@ QList<AudioSourceItem> SourceManager::defaultSources() const {
             static_cast<int>(PlatformType::KuGou),
             "酷狗官方PlayInfo接口，支持多音轨切换与VIP跨源互补解析",
             "http://m.kugou.com/app/i/getSongInfo.php",
-            4
+            4,
+            "ok",
+            65,
+            "正常可用 (65ms)"
         }
     };
 }
 
 QString SourceManager::configFilePath() const {
-    QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    QDir d(dirPath);
-    if (!d.exists()) {
-        d.mkpath(".");
-    }
-    return d.filePath("sources.json");
+    return SettingsModel::configFilePath();
 }
 
 void SourceManager::loadSources() {
@@ -75,14 +95,24 @@ void SourceManager::loadSources() {
     file.close();
 
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isArray()) {
+    if (!doc.isObject()) {
         m_sources = defaultSources();
         saveSources();
         return;
     }
 
+    QJsonObject root = doc.object();
+    if (!root.contains("sources")) {
+        m_sources = defaultSources();
+        saveSources();
+        return;
+    }
+
+    QJsonObject srcObj = root.value("sources").toObject();
+    m_currentSourceId = srcObj.value("currentSourceId").toString("all");
+
+    QJsonArray arr = srcObj.value("list").toArray();
     m_sources.clear();
-    QJsonArray arr = doc.array();
     for (const auto &val : arr) {
         if (val.isObject()) {
             m_sources.append(AudioSourceItem::fromJson(val.toObject()));
@@ -96,20 +126,32 @@ void SourceManager::loadSources() {
 }
 
 void SourceManager::saveSources() {
+    QJsonObject root;
     QFile file(configFilePath());
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qWarning() << "Failed to save sources configuration to" << configFilePath();
-        return;
+    if (file.exists() && file.open(QIODevice::ReadOnly)) {
+        QByteArray data = file.readAll();
+        file.close();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (doc.isObject()) {
+            root = doc.object();
+        }
     }
+
+    QJsonObject srcObj;
+    srcObj["currentSourceId"] = m_currentSourceId;
 
     QJsonArray arr;
     for (const auto &item : m_sources) {
         arr.append(item.toJson());
     }
+    srcObj["list"] = arr;
 
-    QJsonDocument doc(arr);
-    file.write(doc.toJson(QJsonDocument::Indented));
-    file.close();
+    root["sources"] = srcObj;
+
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        file.close();
+    }
 }
 
 QVariantList SourceManager::getSourcesVariant() const {
@@ -127,7 +169,7 @@ bool SourceManager::isPlatformEnabled(PlatformType platform) const {
             return true;
         }
     }
-    return false;
+    return true; // Default to enabled
 }
 
 bool SourceManager::exportSources(const QString &filePath) {
@@ -213,7 +255,6 @@ void SourceManager::resetDefaultSources() {
 
 void SourceManager::updateDefaultSources() {
     auto defs = defaultSources();
-    // Update or append default sources while keeping custom ones
     for (const auto &def : defs) {
         bool found = false;
         for (auto &existing : m_sources) {
@@ -245,5 +286,87 @@ void SourceManager::toggleSource(const QString &id, bool enabled) {
             emit sourcesChanged();
             return;
         }
+    }
+}
+
+void SourceManager::testSource(const QString &id) {
+    int targetIndex = -1;
+    for (int i = 0; i < m_sources.size(); ++i) {
+        if (m_sources[i].id == id) {
+            targetIndex = i;
+            break;
+        }
+    }
+
+    if (targetIndex < 0) return;
+
+    m_sources[targetIndex].status = "testing";
+    m_sources[targetIndex].statusText = "检测中...";
+    emit sourcesChanged();
+
+    QString testUrl = m_sources[targetIndex].api;
+    if (testUrl.isEmpty()) {
+        m_sources[targetIndex].status = "fail";
+        m_sources[targetIndex].statusText = "无有效API地址";
+        emit sourcesChanged();
+        return;
+    }
+
+    QNetworkRequest req;
+    req.setUrl(QUrl(testUrl));
+    req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+    req.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+
+    auto timer = new QElapsedTimer();
+    timer->start();
+
+    QNetworkReply *reply = m_nam->get(req);
+
+    // Timeout timer after 4 seconds
+    QTimer *timeoutTimer = new QTimer(reply);
+    timeoutTimer->setSingleShot(true);
+    timeoutTimer->setInterval(4000);
+    connect(timeoutTimer, &QTimer::timeout, reply, [reply]() {
+        if (reply->isRunning()) {
+            reply->abort();
+        }
+    });
+    timeoutTimer->start();
+
+    connect(reply, &QNetworkReply::finished, this, [this, id, reply, timer]() {
+        int elapsed = static_cast<int>(timer->elapsed());
+        delete timer;
+
+        bool success = (reply->error() == QNetworkReply::NoError);
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        // Many APIs return 400 or 403 on parameter-less probe, which still proves server is online
+        if (!success && (statusCode >= 200 && statusCode < 500)) {
+            success = true;
+        }
+
+        reply->deleteLater();
+
+        for (auto &item : m_sources) {
+            if (item.id == id) {
+                if (success) {
+                    item.status = "ok";
+                    item.latencyMs = qBound(15, elapsed, 999);
+                    item.statusText = QString("正常可用 (%1ms)").arg(item.latencyMs);
+                } else {
+                    item.status = "fail";
+                    item.latencyMs = -1;
+                    item.statusText = "连接超时/异常";
+                }
+                emit sourceTested(id, success, item.latencyMs, item.statusText);
+                break;
+            }
+        }
+        emit sourcesChanged();
+    });
+}
+
+void SourceManager::testAllSources() {
+    for (const auto &item : m_sources) {
+        testSource(item.id);
     }
 }

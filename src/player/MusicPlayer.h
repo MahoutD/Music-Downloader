@@ -5,6 +5,7 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QUrl>
+#include <QNetworkAccessManager>
 #include "../models/SongItem.h"
 #include "../services/MusicService.h"
 
@@ -42,6 +43,7 @@ private:
     MusicService *m_musicService;
     QMediaPlayer *m_player;
     QAudioOutput *m_audioOutput;
+    QNetworkAccessManager *m_cacheNam;
     SongItem m_currentSong;
     QualityType m_playbackQuality = QualityType::High_320k;
 };

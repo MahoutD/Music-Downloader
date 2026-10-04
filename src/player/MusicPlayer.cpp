@@ -1,8 +1,18 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "MusicPlayer.h"
+#include "../models/SettingsModel.h"
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 #include <QDebug>
 
 MusicPlayer::MusicPlayer(MusicService *musicService, QObject *parent)
-    : QObject(parent), m_musicService(musicService) {
+    : QObject(parent), m_musicService(musicService), m_cacheNam(new QNetworkAccessManager(this)) {
     m_player = new QMediaPlayer(this);
     m_audioOutput = new QAudioOutput(this);
     m_player->setAudioOutput(m_audioOutput);
@@ -45,15 +55,60 @@ void MusicPlayer::playSong(const SongItem &song, QualityType quality) {
         m_player->play();
     };
 
-    // Try requested quality first
+    // 1. Check local playback cache
+    auto &settings = SettingsModel::instance();
+    if (settings.cacheEnabled()) {
+        QString cDir = settings.cacheDir();
+        QString cacheKey = QString("%1_%2").arg(song.id).arg(static_cast<int>(m_playbackQuality));
+        QStringList candidateExtensions = {"flac", "mp3", "m4a"};
+        for (const auto &ext : candidateExtensions) {
+            QString cFile = QDir(cDir).filePath(cacheKey + "." + ext);
+            QFileInfo fi(cFile);
+            if (fi.exists() && fi.size() > 50000) {
+                // Instantly play local cache file
+                m_player->stop();
+                m_player->setSource(QUrl::fromLocalFile(cFile));
+                m_player->play();
+                return;
+            }
+        }
+    }
+
+    // 2. Resolve audio URL online
     m_musicService->resolveAudioUrl(song, m_playbackQuality, [this, song, tryPlayUrl](bool ok, const QString &url, const QString &ext) {
-        Q_UNUSED(ext)
         if (ok && !url.isEmpty()) {
             tryPlayUrl(url);
+
+            // Asynchronously cache audio file to local cacheDir in background
+            auto &settings = SettingsModel::instance();
+            if (settings.cacheEnabled() && url.startsWith("http")) {
+                QString cDir = settings.cacheDir();
+                QString cleanExt = ext.isEmpty() ? "mp3" : ext;
+                QString targetCacheFile = QDir(cDir).filePath(QString("%1_%2.%3").arg(song.id).arg(static_cast<int>(m_playbackQuality)).arg(cleanExt));
+                if (!QFile::exists(targetCacheFile)) {
+                    QNetworkRequest req;
+                    req.setUrl(QUrl(url));
+                    req.setHeader(QNetworkRequest::UserAgentHeader, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                    QNetworkReply *reply = m_cacheNam->get(req);
+                    connect(reply, &QNetworkReply::finished, this, [reply, targetCacheFile]() {
+                        if (reply->error() == QNetworkReply::NoError) {
+                            QByteArray data = reply->readAll();
+                            if (data.size() > 50000) {
+                                QFile f(targetCacheFile);
+                                if (f.open(QIODevice::WriteOnly)) {
+                                    f.write(data);
+                                    f.close();
+                                }
+                            }
+                        }
+                        reply->deleteLater();
+                    });
+                }
+            }
             return;
         }
 
-        // Fallback to high 320k or standard 128k
+        // Fallback quality
         QualityType fallback = (m_playbackQuality == QualityType::Standard_128k) ? QualityType::High_320k : QualityType::Standard_128k;
         m_musicService->resolveAudioUrl(song, fallback, [this, song, tryPlayUrl](bool ok2, const QString &url2, const QString &ext2) {
             Q_UNUSED(ext2)
@@ -77,6 +132,27 @@ void MusicPlayer::setPlaybackQuality(QualityType quality) {
     bool wasPlaying = (m_player->playbackState() == QMediaPlayer::PlayingState);
 
     SongItem song = m_currentSong;
+
+    // Check cache first for new quality
+    auto &settings = SettingsModel::instance();
+    if (settings.cacheEnabled()) {
+        QString cDir = settings.cacheDir();
+        QString cacheKey = QString("%1_%2").arg(song.id).arg(static_cast<int>(m_playbackQuality));
+        QStringList candidateExtensions = {"flac", "mp3", "m4a"};
+        for (const auto &ext : candidateExtensions) {
+            QString cFile = QDir(cDir).filePath(cacheKey + "." + ext);
+            QFileInfo fi(cFile);
+            if (fi.exists() && fi.size() > 50000) {
+                m_player->setSource(QUrl::fromLocalFile(cFile));
+                m_player->setPosition(currentPos);
+                if (wasPlaying) {
+                    m_player->play();
+                }
+                return;
+            }
+        }
+    }
+
     m_musicService->resolveAudioUrl(song, m_playbackQuality, [this, song, currentPos, wasPlaying](bool ok, const QString &url, const QString &ext) {
         Q_UNUSED(ext)
         if (m_currentSong.id != song.id) return;
@@ -127,5 +203,5 @@ qint64 MusicPlayer::duration() const {
 }
 
 int MusicPlayer::volume() const {
-    return static_cast<int>(m_audioOutput->volume() * 100);
+    return qRound(m_audioOutput->volume() * 100);
 }

@@ -10,6 +10,7 @@
 #include "services/SourceManager.h"
 #include "player/MusicPlayer.h"
 #include "download/DownloadManager.h"
+#include "models/SettingsModel.h"
 #include "bridge/AppBridge.h"
 
 #include <QFile>
@@ -37,14 +38,8 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("MusicDownloader");
     app.setOrganizationName("MusicDownloader");
-    app.setApplicationVersion("2.0.0");
+    app.setApplicationVersion("1.0.0");
     app.setWindowIcon(QIcon(":/icons/app.ico"));
-
-    // Set high quality default font
-    QFont font = app.font();
-    font.setFamily("Microsoft YaHei");
-    font.setPointSize(9);
-    app.setFont(font);
 
     // Set modern clean QML style
     QQuickStyle::setStyle("Basic");
@@ -55,6 +50,12 @@ int main(int argc, char *argv[]) {
     DownloadManager downloadManager(&musicService);
     SourceManager sourceManager;
     musicService.setSourceManager(&sourceManager);
+
+    // Save configurations on exit
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
+        SettingsModel::instance().save();
+        sourceManager.saveSources();
+    });
 
     // Bridge C++ backend with QML UI
     AppBridge bridge(&musicService, &musicPlayer, &downloadManager, &sourceManager);

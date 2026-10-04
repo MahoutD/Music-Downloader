@@ -59,7 +59,7 @@ Rectangle {
                         font.bold: true
                     }
                     Text {
-                        text: "版本 v2.0.0 (Qt Quick/QML 现代重构版)"
+                        text: "版本 v1.0.0 (Qt Quick/QML 现代重构版)"
                         color: Theme.accent
                         font.pixelSize: 11
                         font.bold: true
