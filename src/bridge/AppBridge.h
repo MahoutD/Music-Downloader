@@ -44,14 +44,15 @@ class AppBridge : public QObject {
     Q_PROPERTY(QString currentSourceId READ currentSourceId WRITE setCurrentSourceId NOTIFY currentSourceIdChanged)
 
     // Settings Properties
-    Q_PROPERTY(QString downloadDir READ downloadDir NOTIFY settingsChanged)
-    Q_PROPERTY(int defaultQuality READ defaultQuality NOTIFY settingsChanged)
-    Q_PROPERTY(int preferredPlaybackQuality READ preferredPlaybackQuality NOTIFY settingsChanged)
-    Q_PROPERTY(bool downloadLyric READ downloadLyric NOTIFY settingsChanged)
-    Q_PROPERTY(bool downloadCover READ downloadCover NOTIFY settingsChanged)
-    Q_PROPERTY(int fileNameFormat READ fileNameFormat NOTIFY settingsChanged)
+    Q_PROPERTY(QString downloadDir READ downloadDir WRITE setDownloadDir NOTIFY settingsChanged)
+    Q_PROPERTY(int defaultQuality READ defaultQuality WRITE setDefaultQuality NOTIFY settingsChanged)
+    Q_PROPERTY(int preferredPlaybackQuality READ preferredPlaybackQuality WRITE setPreferredPlaybackQuality NOTIFY settingsChanged)
+    Q_PROPERTY(bool downloadLyric READ downloadLyric WRITE setDownloadLyric NOTIFY settingsChanged)
+    Q_PROPERTY(bool downloadCover READ downloadCover WRITE setDownloadCover NOTIFY settingsChanged)
+    Q_PROPERTY(int fileNameFormat READ fileNameFormat WRITE setFileNameFormat NOTIFY settingsChanged)
     Q_PROPERTY(QString cacheSizeText READ cacheSizeText NOTIFY cacheSizeChanged)
-    Q_PROPERTY(bool cacheEnabled READ cacheEnabled NOTIFY settingsChanged)
+    Q_PROPERTY(bool cacheEnabled READ cacheEnabled WRITE setCacheEnabled NOTIFY settingsChanged)
+    Q_PROPERTY(int themeMode READ themeMode WRITE setThemeMode NOTIFY themeModeChanged)
 
 public:
     explicit AppBridge(MusicService *musicService,
@@ -87,14 +88,31 @@ public:
     }
 
     QString downloadDir() const { return SettingsModel::instance().downloadDir(); }
+    Q_INVOKABLE void setDownloadDir(const QString &dir);
+
     int defaultQuality() const { return static_cast<int>(SettingsModel::instance().defaultQuality()); }
+    Q_INVOKABLE void setDefaultQuality(int quality);
+
     int preferredPlaybackQuality() const { return static_cast<int>(SettingsModel::instance().preferredPlaybackQuality()); }
+    Q_INVOKABLE void setPreferredPlaybackQuality(int quality);
+
     bool downloadLyric() const { return SettingsModel::instance().downloadLyrics(); }
+    Q_INVOKABLE void setDownloadLyric(bool lyric);
+
     bool downloadCover() const { return SettingsModel::instance().downloadCover(); }
+    Q_INVOKABLE void setDownloadCover(bool cover);
+
     int fileNameFormat() const { return SettingsModel::instance().fileNameFormat(); }
+    Q_INVOKABLE void setFileNameFormat(int format);
+
     int playbackQuality() const;
     QString cacheSizeText() const { return SettingsModel::instance().formattedCacheSize(); }
+
     bool cacheEnabled() const { return SettingsModel::instance().cacheEnabled(); }
+    Q_INVOKABLE void setCacheEnabled(bool enabled);
+
+    int themeMode() const { return SettingsModel::instance().themeMode(); }
+    Q_INVOKABLE void setThemeMode(int mode);
 
     // --- Search APIs ---
     Q_INVOKABLE void search(const QString &keyword, int platform, int page = 1, int pageSize = 20);
@@ -184,6 +202,7 @@ signals:
     // Settings Signals
     void settingsChanged();
     void cacheSizeChanged();
+    void themeModeChanged();
 
     // General Notification
     void showToast(const QString &msg, bool isError = false);

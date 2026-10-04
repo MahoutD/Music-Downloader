@@ -12,11 +12,18 @@ ApplicationWindow {
     title: "音乐下载器 - 全网高品质无损音乐下载"
     color: Theme.bgDark
 
-    // Toast Notification Receiver
+    Component.onCompleted: {
+        Theme.setTheme(backend.themeMode)
+    }
+
+    // Connections to backend
     Connections {
         target: backend
         function onShowToast(msg, isError) {
             toast.show(msg, isError)
+        }
+        function onThemeModeChanged() {
+            Theme.setTheme(backend.themeMode)
         }
     }
 

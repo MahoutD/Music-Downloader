@@ -214,7 +214,10 @@ Rectangle {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-            onClicked: Theme.nextTheme()
+            onClicked: {
+                Theme.nextTheme()
+                backend.themeMode = Theme.themeMode
+            }
         }
     }
 }

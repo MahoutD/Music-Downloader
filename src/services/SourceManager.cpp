@@ -150,6 +150,7 @@ void SourceManager::saveSources() {
 
     if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+        file.flush();
         file.close();
     }
 }

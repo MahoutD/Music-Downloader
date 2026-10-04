@@ -22,8 +22,10 @@ AppBridge::AppBridge(MusicService *musicService,
 
     // Restore saved settings into player
     auto &settings = SettingsModel::instance();
+    settings.load();
     m_playMode = settings.playMode();
     m_player->setVolume(settings.volume());
+    m_player->setPlaybackQuality(settings.preferredPlaybackQuality());
 
     // Player Signal Connections
     connect(m_player, &MusicPlayer::currentSongChanged, this, [this](const SongItem &song) {
@@ -223,6 +225,11 @@ int AppBridge::playbackQuality() const {
 void AppBridge::setPlaybackQuality(int quality) {
     QualityType q = static_cast<QualityType>(qBound(0, quality, 2));
     m_player->setPlaybackQuality(q);
+    auto &s = SettingsModel::instance();
+    s.setPreferredPlaybackQuality(q);
+    s.save();
+    emit settingsChanged();
+    emit playbackQualityChanged();
 }
 
 QString AppBridge::playbackQualityName() const {
@@ -465,22 +472,87 @@ void AppBridge::testAllSources() {
     m_sourceManager->testAllSources();
 }
 
+void AppBridge::setDownloadDir(const QString &dir) {
+    if (dir.trimmed().isEmpty()) return;
+    auto &s = SettingsModel::instance();
+    s.setDownloadDir(dir);
+    s.save();
+    emit settingsChanged();
+}
+
+void AppBridge::setDefaultQuality(int quality) {
+    auto &s = SettingsModel::instance();
+    s.setDefaultQuality(static_cast<QualityType>(qBound(0, quality, 2)));
+    s.save();
+    emit settingsChanged();
+}
+
+void AppBridge::setPreferredPlaybackQuality(int quality) {
+    auto &s = SettingsModel::instance();
+    QualityType q = static_cast<QualityType>(qBound(0, quality, 2));
+    s.setPreferredPlaybackQuality(q);
+    m_player->setPlaybackQuality(q);
+    s.save();
+    emit settingsChanged();
+    emit playbackQualityChanged();
+}
+
+void AppBridge::setDownloadLyric(bool lyric) {
+    auto &s = SettingsModel::instance();
+    s.setDownloadLyrics(lyric);
+    s.save();
+    emit settingsChanged();
+}
+
+void AppBridge::setDownloadCover(bool cover) {
+    auto &s = SettingsModel::instance();
+    s.setDownloadCover(cover);
+    s.save();
+    emit settingsChanged();
+}
+
+void AppBridge::setFileNameFormat(int format) {
+    auto &s = SettingsModel::instance();
+    s.setFileNameFormat(format);
+    s.save();
+    emit settingsChanged();
+}
+
+void AppBridge::setCacheEnabled(bool enabled) {
+    auto &s = SettingsModel::instance();
+    s.setCacheEnabled(enabled);
+    s.save();
+    emit settingsChanged();
+    emit cacheSizeChanged();
+}
+
+void AppBridge::setThemeMode(int mode) {
+    auto &s = SettingsModel::instance();
+    s.setThemeMode(qBound(0, mode, 3));
+    s.save();
+    emit themeModeChanged();
+}
+
 // --- Settings & Cache APIs ---
 void AppBridge::saveSettings(const QString &dir, int quality, bool lyric, bool cover, int format, int preferredPlaybackQuality, bool cacheEnabled) {
     auto &s = SettingsModel::instance();
-    s.setDownloadDir(dir);
+    if (!dir.trimmed().isEmpty()) {
+        s.setDownloadDir(dir);
+    }
     s.setDefaultQuality(static_cast<QualityType>(qBound(0, quality, 2)));
     s.setDownloadLyrics(lyric);
     s.setDownloadCover(cover);
     s.setFileNameFormat(format);
     if (preferredPlaybackQuality >= 0) {
-        s.setPreferredPlaybackQuality(static_cast<QualityType>(qBound(0, preferredPlaybackQuality, 2)));
+        QualityType pq = static_cast<QualityType>(qBound(0, preferredPlaybackQuality, 2));
+        s.setPreferredPlaybackQuality(pq);
+        m_player->setPlaybackQuality(pq);
     }
     s.setCacheEnabled(cacheEnabled);
     s.save();
     emit settingsChanged();
     emit cacheSizeChanged();
-    emit showToast("设置已保存并写入配置文件！", false);
+    emit playbackQualityChanged();
 }
 
 QString AppBridge::chooseDirectory() {

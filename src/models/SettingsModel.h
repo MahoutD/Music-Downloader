@@ -42,7 +42,7 @@ public:
         m_maxCacheSizeMb = 1024;
         m_playMode = 0;
         m_volume = 80;
-        m_themeMode = 0;
+        m_themeMode = 3;
         m_desktopLyricsEnabled = false;
 
         QFile file(configFilePath());
@@ -57,11 +57,23 @@ public:
                 if (!s.isEmpty()) {
                     if (s.contains("downloadDir")) {
                         QString dir = s.value("downloadDir").toString();
-                        if (!dir.trimmed().isEmpty()) m_downloadDir = QDir::cleanPath(dir);
+                        if (!dir.trimmed().isEmpty()) {
+                            if (QDir::isRelativePath(dir)) {
+                                m_downloadDir = QDir::cleanPath(QDir(appDir).filePath(dir));
+                            } else {
+                                m_downloadDir = QDir::cleanPath(dir);
+                            }
+                        }
                     }
                     if (s.contains("cacheDir")) {
                         QString cdir = s.value("cacheDir").toString();
-                        if (!cdir.trimmed().isEmpty()) m_cacheDir = QDir::cleanPath(cdir);
+                        if (!cdir.trimmed().isEmpty()) {
+                            if (QDir::isRelativePath(cdir)) {
+                                m_cacheDir = QDir::cleanPath(QDir(appDir).filePath(cdir));
+                            } else {
+                                m_cacheDir = QDir::cleanPath(cdir);
+                            }
+                        }
                     }
                     if (s.contains("defaultQuality")) {
                         m_defaultQuality = static_cast<QualityType>(qBound(0, s.value("defaultQuality").toInt(), 2));
@@ -94,7 +106,7 @@ public:
                         m_volume = s.value("volume").toInt(80);
                     }
                     if (s.contains("themeMode")) {
-                        m_themeMode = s.value("themeMode").toInt(0);
+                        m_themeMode = s.value("themeMode").toInt(3);
                     }
                     if (s.contains("desktopLyricsEnabled")) {
                         m_desktopLyricsEnabled = s.value("desktopLyricsEnabled").toBool(false);
@@ -142,13 +154,18 @@ public:
 
         if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+            file.flush();
             file.close();
         }
     }
 
     QString downloadDir() const { return m_downloadDir; }
     void setDownloadDir(const QString &dir) {
-        m_downloadDir = QDir::cleanPath(dir);
+        if (QDir::isRelativePath(dir)) {
+            m_downloadDir = QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath(dir));
+        } else {
+            m_downloadDir = QDir::cleanPath(dir);
+        }
         QDir().mkpath(m_downloadDir);
     }
 

@@ -41,6 +41,9 @@ int main(int argc, char *argv[]) {
     app.setApplicationVersion("1.0.0");
     app.setWindowIcon(QIcon(":/icons/app.ico"));
 
+    // Explicitly load configuration from config.json
+    SettingsModel::instance().load();
+
     // Set modern clean QML style
     QQuickStyle::setStyle("Basic");
 

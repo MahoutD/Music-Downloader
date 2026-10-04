@@ -13,6 +13,10 @@ Rectangle {
     property bool downloadCover: backend.downloadCover
     property int fileNameFormat: backend.fileNameFormat
 
+    function syncSettings() {
+        backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
+    }
+
     signal openAboutRequested()
 
     Connections {
@@ -95,7 +99,10 @@ Rectangle {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: Theme.setTheme(modelData.mode)
+                                    onClicked: {
+                                        Theme.setTheme(modelData.mode)
+                                        backend.themeMode = modelData.mode
+                                    }
                                 }
                             }
                         }
@@ -274,7 +281,11 @@ Rectangle {
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.selectedQuality = modelData.val
+                                        onClicked: {
+                                            root.selectedQuality = modelData.val
+                                            backend.defaultQuality = modelData.val
+                                            root.syncSettings()
+                                        }
                                     }
                                 }
                             }
@@ -325,7 +336,11 @@ Rectangle {
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.downloadLyric = !root.downloadLyric
+                                        onClicked: {
+                                            root.downloadLyric = !root.downloadLyric
+                                            backend.downloadLyric = root.downloadLyric
+                                            root.syncSettings()
+                                        }
                                     }
                                 }
 
@@ -361,7 +376,11 @@ Rectangle {
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.downloadCover = !root.downloadCover
+                                        onClicked: {
+                                            root.downloadCover = !root.downloadCover
+                                            backend.downloadCover = root.downloadCover
+                                            root.syncSettings()
+                                        }
                                     }
                                 }
 
@@ -402,7 +421,8 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
+                                    root.syncSettings()
+                                    backend.showToast("下载设置已保存并立即生效", false)
                                 }
                             }
                         }
@@ -488,7 +508,7 @@ Rectangle {
                                         onClicked: {
                                             root.preferredQuality = modelData.val
                                             backend.preferredPlaybackQuality = modelData.val
-                                            backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
+                                            root.syncSettings()
                                         }
                                     }
                                 }
@@ -543,7 +563,7 @@ Rectangle {
                                         onClicked: {
                                             root.cacheEnabled = !root.cacheEnabled
                                             backend.cacheEnabled = root.cacheEnabled
-                                            backend.saveSettings(root.downloadDir, root.selectedQuality, root.downloadLyric, root.downloadCover, root.fileNameFormat, root.preferredQuality, root.cacheEnabled)
+                                            root.syncSettings()
                                         }
                                     }
                                 }
