@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <circle cx="24" cy="24" r="23" fill="#ff7700"/>
+  <text x="24" y="31" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="20" fill="#ffffff" text-anchor="middle">KW</text>
+  <circle cx="35" cy="15" r="3.5" fill="#ffffff"/>
+  <rect x="33" y="15" width="4" height="12" fill="#ffffff" rx="2"/>
+</svg>

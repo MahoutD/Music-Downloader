@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#grad)"/>
+  <!-- Headphones -->
+  <path d="M18 34 A14 14 0 0 1 46 34" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+  <!-- Left earpad -->
+  <rect x="14" y="32" width="8" height="14" rx="4" fill="#ffffff"/>
+  <!-- Right earpad -->
+  <rect x="42" y="32" width="8" height="14" rx="4" fill="#ffffff"/>
+  <!-- Music note in center -->
+  <circle cx="30" cy="38" r="3" fill="#ffffff"/>
+  <rect x="31" y="28" width="3" height="10" fill="#ffffff" rx="1.5"/>
+  <polygon points="34,28 39,26 39,29 34,31" fill="#ffffff"/>
+</svg>

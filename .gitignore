@@ -1,0 +1,32 @@
+# Build and binaries
+build/
+bin/
+out/
+*.exe
+*.dll
+*.pdb
+*.obj
+*.lib
+*.exp
+*.ilk
+
+# CMake and build tools
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CMakeUserPresets.json
+Makefile
+.ninja*
+
+# IDE and editors
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+
+# Logs and temp files
+*.log
+app.log
+scratch/
+.system_generated/

@@ -1,0 +1,26 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/qq.svg</file>
+        <file>icons/kugou.svg</file>
+        <file>icons/netease.svg</file>
+        <file>icons/kuwo.svg</file>
+        <file>icons/all.svg</file>
+        <file>icons/app.svg</file>
+        <file>qml/qmldir</file>
+        <file>qml/Theme.qml</file>
+        <file>qml/Toast.qml</file>
+        <file>qml/LyricsDrawer.qml</file>
+        <file>qml/PlayerBar.qml</file>
+        <file>qml/Sidebar.qml</file>
+        <file>qml/SearchPage.qml</file>
+        <file>qml/ChartsPage.qml</file>
+        <file>qml/DownloadPage.qml</file>
+        <file>qml/PlaylistPage.qml</file>
+        <file>qml/SettingsPage.qml</file>
+        <file>qml/PlayModeIcon.qml</file>
+        <file>qml/AboutDialog.qml</file>
+        <file>qml/DesktopLyricsWindow.qml</file>
+        <file>qml/ImmersionPlayer.qml</file>
+        <file>qml/Main.qml</file>
+    </qresource>
+</RCC>

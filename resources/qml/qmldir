@@ -1,0 +1,14 @@
+singleton Theme 1.0 Theme.qml
+PlayModeIcon 1.0 PlayModeIcon.qml
+AboutDialog 1.0 AboutDialog.qml
+DesktopLyricsWindow 1.0 DesktopLyricsWindow.qml
+ImmersionPlayer 1.0 ImmersionPlayer.qml
+Toast 1.0 Toast.qml
+LyricsDrawer 1.0 LyricsDrawer.qml
+PlayerBar 1.0 PlayerBar.qml
+Sidebar 1.0 Sidebar.qml
+SearchPage 1.0 SearchPage.qml
+ChartsPage 1.0 ChartsPage.qml
+DownloadPage 1.0 DownloadPage.qml
+PlaylistPage 1.0 PlaylistPage.qml
+SettingsPage 1.0 SettingsPage.qml
