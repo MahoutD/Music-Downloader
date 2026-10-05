@@ -65,6 +65,11 @@ int main(int argc, char *argv[]) {
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("backend", &bridge);
+    bool captureMode = app.arguments().contains("--capture-screenshots");
+    engine.rootContext()->setContextProperty("autoCaptureScreenshots", captureMode);
+    QString screenshotDir = QDir("D:/WorkSpace/AI_Work/Music Downloader/screenshots").absolutePath();
+    QDir().mkpath(screenshotDir);
+    engine.rootContext()->setContextProperty("screenshotDir", screenshotDir);
 
     QObject::connect(
         &engine,

@@ -1080,6 +1080,11 @@ Rectangle {
         }
     }
 
+    function triggerSearch(keyword) {
+        searchInput.text = keyword
+        executeSearch(1)
+    }
+
     function executeSearch(page) {
         var kw = searchInput.text.trim()
         if (kw.length === 0) return

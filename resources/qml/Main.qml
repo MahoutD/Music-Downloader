@@ -27,11 +27,16 @@ ApplicationWindow {
         }
     }
 
-    // Main App Container
+    // Root Content Item for Rendering & High-Resolution Capture
     Item {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
+        id: appRoot
+        anchors.fill: parent
+
+        // Main App Container
+        Item {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
         anchors.bottom: playerBar.top
 
         // 1. Sidebar Navigation
@@ -297,6 +302,7 @@ ApplicationWindow {
         id: immersionPlayer
         anchors.fill: parent
     }
+    } // end appRoot
 
     // 7. Modal About Dialog
     AboutDialog {
@@ -312,5 +318,97 @@ ApplicationWindow {
     // 9. Floating Notification Toast
     Toast {
         id: toast
+    }
+
+    // 10. Automated Screen Capture Timer (Triggered only when --capture-screenshots flag is passed)
+    Timer {
+        id: captureTimer
+        interval: 2200
+        repeat: true
+        running: (typeof autoCaptureScreenshots !== "undefined") && autoCaptureScreenshots
+        property int step: 0
+        onTriggered: {
+            step++
+            console.log("[Capture Timer] Step " + step)
+            if (step === 1) {
+                // Step 1: Capture 01_home_search.png (Default Light "简约晨曦" theme)
+                pageStack.currentIndex = 0
+                Theme.setTheme(3)
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/01_home_search.png")
+                    console.log("[Screenshot] 01_home_search.png saved: " + ok)
+                })
+            } else if (step === 2) {
+                // Step 2: Trigger search
+                searchPage.triggerSearch("周杰伦")
+            } else if (step === 3) {
+                // Step 3: Capture search results
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/02_search_results.png")
+                    console.log("[Screenshot] 02_search_results.png saved: " + ok)
+                })
+            } else if (step === 4) {
+                // Step 4: Switch to Tab 1 (热门榜单)
+                pageStack.currentIndex = 1
+            } else if (step === 5) {
+                // Step 5: Capture Charts page
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/03_hot_charts.png")
+                    console.log("[Screenshot] 03_hot_charts.png saved: " + ok)
+                })
+            } else if (step === 6) {
+                // Step 6: Switch to Tab 4 (设置与音源管理)
+                pageStack.currentIndex = 4
+            } else if (step === 7) {
+                // Step 7: Capture Settings & Sources page
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/04_settings_sources.png")
+                    console.log("[Screenshot] 04_settings_sources.png saved: " + ok)
+                })
+            } else if (step === 8) {
+                // Step 8: Play song & Open Immersion Vinyl Player
+                pageStack.currentIndex = 0
+                backend.playSong({
+                    "id": "demo_jay_01",
+                    "title": "晴天",
+                    "artist": "周杰伦",
+                    "album": "叶惠美",
+                    "coverUrl": "https://y.gtimg.cn/music/photo_new/T002R300x300M000000Mk5ni19clKG.jpg",
+                    "platform": 2
+                }, 2)
+                immersionPlayer.open()
+            } else if (step === 9) {
+                // Step 9: Capture Vinyl Immersion Player
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/05_vinyl_immersion_player.png")
+                    console.log("[Screenshot] 05_vinyl_immersion_player.png saved: " + ok)
+                })
+            } else if (step === 10) {
+                // Step 10: Switch to Dark Night theme
+                immersionPlayer.close()
+                Theme.setTheme(0)
+                pageStack.currentIndex = 0
+            } else if (step === 11) {
+                // Step 11: Capture Dark Night theme
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/06_dark_night_theme.png")
+                    console.log("[Screenshot] 06_dark_night_theme.png saved: " + ok)
+                })
+            } else if (step === 12) {
+                // Step 12: Switch to NetEase Red theme
+                Theme.setTheme(2)
+                pageStack.currentIndex = 1
+            } else if (step === 13) {
+                // Step 13: Capture NetEase Red theme
+                appRoot.grabToImage(function(result) {
+                    var ok = result.saveToFile(screenshotDir + "/07_netease_red_theme.png")
+                    console.log("[Screenshot] 07_netease_red_theme.png saved: " + ok)
+                })
+            } else if (step === 14) {
+                captureTimer.running = false
+                console.log("[Screenshot] All 7 screenshots captured successfully!")
+                Qt.quit()
+            }
+        }
     }
 }
