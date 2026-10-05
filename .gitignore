@@ -30,4 +30,5 @@ Makefile
 *.log
 app.log
 scratch/
+scripts/
 .system_generated/
